@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Help & Strategy · Bonus Poker Simulator</title>
+  <meta name="description" content="Strategy, ladder modes, parameters, seeds, and result definitions for the Bonus Poker Simulator.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23081317'/%3E%3Cpath d='M32 10 47 27 32 54 17 27Z' fill='%23efc56b'/%3E%3Ccircle cx='32' cy='29' r='7' fill='%23081317'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell help-shell">
+    <header class="masthead help-masthead">
+      <div>
+        <p class="eyebrow">8/5 Bonus Poker</p>
+        <h1>Help &amp; strategy</h1>
+      </div>
+      <a class="back-link" href="index.html">Back to simulator</a>
+    </header>
+
+    <div class="help-layout">
+      <nav class="help-nav" aria-label="Help topics">
+        <p class="eyebrow">On this page</p>
+        <a href="#overview">How it works</a>
+        <a href="#parameters">Parameters</a>
+        <a href="#modes">Betting modes</a>
+        <a href="#seed">Using a seed</a>
+        <a href="#results">Reading results</a>
+        <a href="#paytable">Paytable</a>
+        <a href="#strategy">45-rule hold strategy</a>
+      </nav>
+
+      <article class="help-content">
+        <section id="overview" class="help-section intro-section">
+          <span class="step">01</span>
+          <p class="eyebrow">Overview</p>
+          <h2>What the simulator models</h2>
+          <p>This simulator deals independent hands of 8/5 Bonus Poker from a fresh 52-card deck. It chooses cards to hold using a fixed, ordered 45-rule strategy chart, draws replacement cards, evaluates the final hand, and applies the paytable below.</p>
+          <div class="callout"><strong>This is not an AI model.</strong> The hold decision is deterministic: rules are checked from first to last, and the first matching rule wins.</div>
+          <p>A <strong>win</strong> means any final category with a non-zero paytable return, including Jacks or Better. A final category of <strong>Nothing</strong> is a loss. Betting ladders react to that win/loss definition.</p>
+        </section>
+
+        <section id="parameters" class="help-section">
+          <span class="step">02</span><p class="eyebrow">Inputs</p><h2>Parameter guide</h2>
+          <div class="definition-grid">
+            <div><h3>Games per set</h3><p>The maximum number of hands in each set. A bankroll threshold can stop a set earlier. Range: 1–100,000.</p></div>
+            <div><h3>Number of sets</h3><p>How many independent sessions to run. Total requested hands—games × sets—cannot exceed 1,000,000.</p></div>
+            <div><h3>Betting mode</h3><p>Selects fixed-credit play or one of five credit progressions. Modes 1–5 always begin at 1 credit.</p></div>
+            <div><h3>Credits per bet</h3><p>The number of credits used on every hand in Mode 0. Modes 1–5 ignore this input because the ladder controls credits.</p></div>
+            <div><h3>Denomination</h3><p>The cash value of one credit. The hand’s bet is <strong>denomination × credits</strong>.</p></div>
+            <div><h3>Seed</h3><p>An optional whole number used to reproduce an experiment. Leave it blank for a fresh random seed.</p></div>
+            <div><h3>Starting balance</h3><p>The bankroll available at the beginning of every set. It must be greater than zero.</p></div>
+            <div><h3>Walk-away balance</h3><p>A set stops after a completed hand reaches or exceeds this target. It must be greater than the starting balance.</p></div>
+            <div><h3>Minimum balance</h3><p>A set stops after a completed hand reaches or falls below this amount. It must be below the starting balance.</p></div>
+          </div>
+        </section>
+
+        <section id="modes" class="help-section">
+          <span class="step">03</span><p class="eyebrow">Credit progression</p><h2>Betting modes</h2>
+          <div class="mode-list">
+            <div><b>0</b><h3>No Ladder</h3><p>Uses the selected fixed credit on every hand. Previous wins and losses do not change the next bet.</p><code>selected credit → selected credit</code></div>
+            <div><b>1</b><h3>Loss Ladder</h3><p>Moves up one level after a loss, remains at 4 after further losses, and resets to 1 after any win.</p><code>1 → 2 → 3 → 4</code></div>
+            <div><b>2</b><h3>Win Ladder</h3><p>Moves up one level after a win, remains at 4 after further wins, and resets to 1 after any loss.</p><code>1 → 2 → 3 → 4</code></div>
+            <div><b>3</b><h3>D'Alembert Ladder</h3><p>Moves up one credit after a loss and down one credit after a win, staying within the 1–4 range.</p><code>loss +1 · win −1</code></div>
+            <div><b>4</b><h3>Aggressive Win Ladder</h3><p>Advances more quickly after wins, remains at 4 after further wins, and resets to 1 after any loss.</p><code>1 → 2 → 4</code></div>
+            <div><b>5</b><h3>Aggressive Loss Ladder</h3><p>Advances more quickly after losses, remains at 4 after further losses, and resets to 1 after any win.</p><code>1 → 2 → 4</code></div>
+          </div>
+          <div class="callout warning"><strong>Important:</strong> a betting progression changes bet exposure, volatility, and the probability of reaching a stopping target. It does not change the underlying expected return of a credit wagered.</div>
+        </section>
+
+        <section id="seed" class="help-section">
+          <span class="step">04</span><p class="eyebrow">Repeatability</p><h2>How seeds work</h2>
+          <p>The seed shown in the results is the <strong>master seed</strong>. For a multi-set experiment, it deterministically generates a different internal seed for each set. Sets therefore do not replay the same sequence.</p>
+          <div class="seed-flow" aria-label="Seed relationship"><strong>Master seed</strong><span>Set 1 seed</span><span>Set 2 seed</span><span>Set 3 seed</span></div>
+          <ul>
+            <li>Leave Seed blank to generate a new master seed using browser randomness.</li>
+            <li>Reuse the same master seed and identical parameters to reproduce the full browser experiment.</li>
+            <li>Use the same seed across betting modes to make mode comparisons more controlled.</li>
+            <li>The browser and Python simulators use different random-number generators, so the same numeric seed does not produce identical deals between them.</li>
+          </ul>
+        </section>
+
+        <section id="results" class="help-section">
+          <span class="step">05</span><p class="eyebrow">Reports</p><h2>Reading the results</h2>
+          <div class="definition-grid">
+            <div><h3>Average games</h3><p>Mean hands completed per set. This can be lower than requested when bankroll rules stop sets early.</p></div>
+            <div><h3>Total bet / returned</h3><p>Average dollars bet and paid back per set. Return is returned ÷ bet.</p></div>
+            <div><h3>Net</h3><p>Average returned minus average bet. A negative number is an average loss.</p></div>
+            <div><h3>Ending bankroll</h3><p>The final balance for one set or the average final balance across multiple sets.</p></div>
+            <div><h3>Credit levels</h3><p>How often each credit level was used, averaged per set for multi-set runs.</p></div>
+            <div><h3>Set outcomes</h3><p>Counts and rates for reaching the target, minimum, insufficient funds, or the hand limit.</p></div>
+          </div>
+          <p>For one set, the chart shows that set’s bankroll after each hand. For multiple sets, it shows the average bankroll at each hand. If a set stops early, its ending balance is carried forward so every later chart point still averages all sets.</p>
+        </section>
+
+        <section id="paytable" class="help-section">
+          <span class="step">06</span><p class="eyebrow">8/5 Bonus Poker</p><h2>Paytable</h2>
+          <div class="table-scroll"><table class="help-table">
+            <thead><tr><th>Final hand</th><th>1 credit</th><th>2</th><th>3</th><th>4</th><th>5</th></tr></thead>
+            <tbody>
+              <tr><td>Royal Flush</td><td>250</td><td>500</td><td>750</td><td>1,000</td><td>4,000</td></tr>
+              <tr><td>Straight Flush</td><td>50</td><td>100</td><td>150</td><td>200</td><td>250</td></tr>
+              <tr><td>Four Aces</td><td>80</td><td>160</td><td>240</td><td>320</td><td>400</td></tr>
+              <tr><td>Four 2s, 3s, or 4s</td><td>40</td><td>80</td><td>120</td><td>160</td><td>200</td></tr>
+              <tr><td>Four 5s through Kings</td><td>25</td><td>50</td><td>75</td><td>100</td><td>125</td></tr>
+              <tr><td>Full House</td><td>8</td><td>16</td><td>24</td><td>32</td><td>40</td></tr>
+              <tr><td>Flush</td><td>5</td><td>10</td><td>15</td><td>20</td><td>25</td></tr>
+              <tr><td>Straight</td><td>4</td><td>8</td><td>12</td><td>16</td><td>20</td></tr>
+              <tr><td>Three of a Kind</td><td>3</td><td>6</td><td>9</td><td>12</td><td>15</td></tr>
+              <tr><td>Two Pair</td><td>2</td><td>4</td><td>6</td><td>8</td><td>10</td></tr>
+              <tr><td>Jacks or Better</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td></tr>
+            </tbody>
+          </table></div>
+          <p class="fine-print">Payouts are credits returned, not net profit. The five-credit Royal Flush contains the standard max-credit bonus.</p>
+        </section>
+
+        <section id="strategy" class="help-section">
+          <span class="step">07</span><p class="eyebrow">First match wins</p><h2>45-rule hold strategy</h2>
+          <p>Starting with Rule 1, hold the first pattern found. “Suited” means all listed cards share a suit. “Unsuited” excludes the suited version. The final rule discards all five cards.</p>
+          <ol class="strategy-list">
+            <li>Pat Royal Flush.</li><li>Pat Straight Flush.</li><li>Four Aces, discarding the kicker.</li><li>Any other Four of a Kind, discarding the kicker.</li>
+            <li>Four suited cards from T–J–Q–K–A.</li><li>Pat Full House.</li><li>Three Aces.</li><li>Pat Flush.</li><li>Any other Three of a Kind.</li><li>Pat Straight.</li>
+            <li>Four-card Straight Flush with no gap.</li><li>Two Pair.</li><li>Four-card Straight Flush with a gap.</li><li>Pair of Jacks, Queens, Kings, or Aces.</li>
+            <li>Three suited cards from T–J–Q–K–A.</li><li>Four cards to a Flush.</li><li>T–J–Q–K.</li><li>Low Pair: 2s through 10s.</li>
+            <li>9–T–J–Q or 8–9–T–J.</li><li>Suited 9–J–Q.</li><li>Suited 9–T–J.</li><li>Four-card open Straight: 2345 through 789T.</li>
+            <li>Suited J–Q.</li><li>J–Q–K–A.</li><li>Suited 8–J–Q, 9–Q–K, or 9–J–K.</li><li>Suited 8–9–J or 8–T–J.</li>
+            <li>Suited J–K or Q–K.</li><li>Suited J–A, Q–A, or K–A.</li><li>Suited 345, 456, 567, 678, 789, or 89T.</li><li>9–J–Q–K, T–J–Q–A, T–J–K–A, or T–Q–K–A.</li>
+            <li>J–Q–K.</li><li>Unsuited J–Q.</li><li>Suited T–J.</li><li>Suited A23, A24, A25, A34, A35, A45, 78J, 79J, 7TJ, 89Q, 8TQ, or 9TK.</li>
+            <li>Unsuited J–K or Q–K.</li><li>Unsuited J–A, Q–A, or K–A.</li><li>Single Ace.</li><li>Suited 234, 235, 245, 346, 356, 457, 467, 568, 578, 679, 689, 78T, or 79T.</li>
+            <li>Single Jack.</li><li>Suited T–Q.</li><li>Single Queen.</li><li>Single King.</li><li>Suited T–K.</li>
+            <li>Suited 236, 246, 256, 347, 357, 367, 458, 468, 478, 569, 579, 589, 67T, 68T, or 69T.</li><li>Discard all cards.</li>
+          </ol>
+        </section>
+      </article>
+    </div>
+  </main>
+</body>
+</html>
