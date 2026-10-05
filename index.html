@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bonus Poker Simulator</title>
+  <meta name="description" content="Run client-side 8/5 Bonus Poker simulations and compare bankroll outcomes.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23081317'/%3E%3Cpath d='M32 10 47 27 32 54 17 27Z' fill='%23efc56b'/%3E%3Ccircle cx='32' cy='29' r='7' fill='%23081317'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">8/5 Bonus Poker</p>
+        <h1>Simulation Dashboard</h1>
+      </div>
+      <div class="limits" aria-label="Simulation limits">
+        <span>100K per set</span><span>1M total hands</span><span>Runs locally</span>
+      </div>
+    </header>
+
+    <section class="workspace" aria-label="Simulator controls">
+      <form id="sim-form" class="control-panel" novalidate>
+        <div class="panel-heading">
+          <div><span class="step">01</span><h2>Configure run</h2></div>
+          <p>Bet = denomination × credit</p>
+        </div>
+
+        <div class="field-grid">
+          <label>Games per set
+            <input id="games" name="games" type="number" min="1" max="100000" step="1" value="10000" required>
+          </label>
+          <label>Number of sets
+            <input id="sets" name="sets" type="number" min="1" max="1000000" step="1" value="1" required>
+          </label>
+          <label>Betting mode
+            <select id="mode" name="mode">
+              <option value="0">0 — No Ladder</option>
+              <option value="1">1 — Loss Ladder</option>
+              <option value="2">2 — Win Ladder</option>
+              <option value="3">3 — D'Alembert Ladder</option>
+              <option value="4">4 — Aggressive Win</option>
+              <option value="5">5 — Aggressive Loss</option>
+            </select>
+          </label>
+          <label>Credits per bet
+            <select id="credit" name="credit">
+              <option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option>
+            </select>
+            <small id="credit-note">Used only in No Ladder mode.</small>
+          </label>
+          <label>Denomination ($)
+            <input id="denom" name="denom" type="number" min="0.01" step="0.01" value="1.00" required>
+          </label>
+          <label><span class="label-title">Seed <span class="optional">optional</span></span>
+            <input id="seed" name="seed" type="text" inputmode="numeric" placeholder="Generated automatically">
+          </label>
+        </div>
+
+        <details class="bankroll-settings">
+          <summary>Bankroll settings</summary>
+          <div class="field-grid compact">
+            <label>Starting balance ($)<input id="bankroll-start" type="number" min="0.01" step="0.01" value="1000"></label>
+            <label>Walk-away balance ($)<input id="bankroll-walk" type="number" min="0.01" step="0.01" value="1300"></label>
+            <label>Minimum balance ($)<input id="bankroll-min" type="number" min="0" step="0.01" value="1"></label>
+          </div>
+        </details>
+
+        <div id="error" class="error" role="alert" hidden></div>
+        <div class="form-actions">
+          <button id="run-button" type="submit">Run simulation</button>
+          <button id="cancel-button" class="secondary" type="button" hidden>Cancel</button>
+          <span id="progress" class="progress" role="status" aria-live="polite"></span>
+        </div>
+      </form>
+
+      <aside class="mode-card" aria-label="Selected mode description">
+        <span class="step">02</span>
+        <p class="mode-kicker">Selected strategy</p>
+        <h2 id="mode-title">No Ladder</h2>
+        <p id="mode-description">Bet the same number of credits every hand, regardless of the previous result.</p>
+        <div class="bankroll-rule"><span>Bankroll</span><strong id="bankroll-rule">$1,000 → $1,300</strong></div>
+      </aside>
+    </section>
+
+    <section id="results" class="results" hidden aria-live="polite">
+      <div class="results-heading">
+        <div><span class="step">03</span><h2>Results</h2></div>
+        <p id="result-context"></p>
+      </div>
+      <div id="stat-grid" class="stat-grid"></div>
+
+      <section class="chart-card">
+        <div class="chart-heading">
+          <div><p class="eyebrow">Bankroll trajectory</p><h3 id="chart-title">Bankroll by hand</h3></div>
+          <div id="chart-legend" class="chart-legend"><span></span>Balance</div>
+        </div>
+        <div class="chart-wrap"><canvas id="bankroll-chart" aria-label="Bankroll history chart"></canvas></div>
+      </section>
+
+      <div class="report-grid">
+        <section class="report-card"><h3>Credit levels</h3><div id="credit-table"></div></section>
+        <section class="report-card"><h3>Hand results</h3><div id="category-table"></div></section>
+        <section class="report-card wide"><h3>Set outcomes</h3><div id="outcome-table"></div></section>
+      </div>
+
+      <details class="text-report"><summary>Plain-text report</summary><pre id="report-output"></pre></details>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
