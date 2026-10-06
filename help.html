@@ -53,6 +53,7 @@
             <div><h3>Starting balance</h3><p>The bankroll available at the beginning of every set. It must be greater than zero.</p></div>
             <div><h3>Walk-away balance</h3><p>A set stops after a completed hand reaches or exceeds this target. It must be greater than the starting balance.</p></div>
             <div><h3>Minimum balance</h3><p>A set stops after a completed hand reaches or falls below this amount. It must be below the starting balance.</p></div>
+            <div><h3>Rebuy</h3><p>When enabled, each time the balance reaches the minimum, one full starting-bankroll amount is added and the set continues. Reports track average rebuy count and dollars added.</p></div>
           </div>
         </section>
 
@@ -85,13 +86,15 @@
           <span class="step">05</span><p class="eyebrow">Reports</p><h2>Reading the results</h2>
           <div class="definition-grid">
             <div><h3>Average games</h3><p>Mean hands completed per set. This can be lower than requested when bankroll rules stop sets early.</p></div>
-            <div><h3>Total bet / returned</h3><p>Average dollars bet and paid back per set. Return is returned ÷ bet.</p></div>
+            <div><h3>Total $ played / returned</h3><p>Total dollars wagered in one set, or the average total per set when multiple sets run. Returned is the corresponding amount paid back.</p></div>
+            <div><h3>Average bet</h3><p>Total dollars played divided by hands played. With No Ladder, this equals credits per bet × denomination.</p></div>
             <div><h3>Net</h3><p>Average returned minus average bet. A negative number is an average loss.</p></div>
             <div><h3>Ending bankroll</h3><p>The final balance for one set or the average final balance across multiple sets.</p></div>
             <div><h3>Credit levels</h3><p>How often each credit level was used, averaged per set for multi-set runs.</p></div>
             <div><h3>Set outcomes</h3><p>Counts and rates for reaching the target, minimum, insufficient funds, or the hand limit.</p></div>
           </div>
           <p>For one set, the chart shows that set’s bankroll after each hand. For multiple sets, it shows the average bankroll at each hand. If a set stops early, its ending balance is carried forward so every later chart point still averages all sets.</p>
+          <p>Rebuy dollars are additional capital, not game returns. Net remains total returned minus total bet; the rebuy count and contributed dollars are reported separately.</p>
         </section>
 
         <section id="paytable" class="help-section">

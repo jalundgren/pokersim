@@ -214,6 +214,7 @@ async function runExperiment(params, onProgress = () => {}) {
   const historyTotals = new Float64Array(params.games + 1);
   let totalGames = 0, totalBet = 0, totalReturned = 0, totalEnding = 0;
   let totalIncreases = 0, totalDecreases = 0, totalResets = 0, totalEndingCredit = 0;
+  let totalRebuys = 0;
   let operations = 0;
 
   for (let setIndex = 0; setIndex < params.sets; setIndex++) {
@@ -223,7 +224,7 @@ async function runExperiment(params, onProgress = () => {}) {
     const levels = emptyCounts([1, 2, 3, 4, 5]);
     const history = [params.bankrollStart];
     let bankroll = params.bankrollStart, gamesPlayed = 0, setBet = 0, setReturned = 0;
-    let ladderCredit = 1, increases = 0, decreases = 0, resets = 0, stopReason = "game count completed";
+    let ladderCredit = 1, increases = 0, decreases = 0, resets = 0, rebuys = 0, stopReason = "game count completed";
 
     for (let game = 0; game < params.games; game++) {
       const gameCredit = params.mode === 0 ? params.credit : ladderCredit;
@@ -244,7 +245,10 @@ async function runExperiment(params, onProgress = () => {}) {
         ladderCredit = next;
       }
       if (bankroll >= params.bankrollWalk) { stopReason = "walk-away balance reached"; break; }
-      if (bankroll <= params.bankrollMin) { stopReason = "minimum balance reached"; break; }
+      if (bankroll <= params.bankrollMin) {
+        if (params.rebuy) { bankroll += params.bankrollStart; history[history.length - 1] = bankroll; rebuys++; }
+        else { stopReason = "minimum balance reached"; break; }
+      }
       if (++operations % 500 === 0) {
         if (cancelRequested) throw new Error("Simulation cancelled.");
         onProgress(setIndex, game + 1); await yieldFrame();
@@ -253,6 +257,7 @@ async function runExperiment(params, onProgress = () => {}) {
 
     totalGames += gamesPlayed; totalBet += setBet; totalReturned += setReturned; totalEnding += bankroll;
     totalIncreases += increases; totalDecreases += decreases; totalResets += resets;
+    totalRebuys += rebuys;
     totalEndingCredit += params.mode === 0 ? params.credit : ladderCredit;
     CATEGORY_ORDER.forEach(key => categoryTotals[key] += categories[key]);
     [1, 2, 3, 4, 5].forEach(key => creditTotals[key] += levels[key]);
@@ -266,6 +271,7 @@ async function runExperiment(params, onProgress = () => {}) {
   return {
     ...params,
     averageGames: totalGames / divisor, averageBet: totalBet / divisor,
+    averageWager: totalGames ? totalBet / totalGames : 0,
     averageReturned: totalReturned / divisor, averageNet: (totalReturned - totalBet) / divisor,
     averageEnding: totalEnding / divisor,
     averageCategories: Object.fromEntries(CATEGORY_ORDER.map(key => [key, categoryTotals[key] / divisor])),
@@ -273,6 +279,7 @@ async function runExperiment(params, onProgress = () => {}) {
     averageHistory: Array.from(historyTotals, value => value / divisor), outcomes: outcomeTotals,
     averageIncreases: totalIncreases / divisor, averageDecreases: totalDecreases / divisor,
     averageResets: totalResets / divisor, averageEndingCredit: totalEndingCredit / divisor,
+    averageRebuys: totalRebuys / divisor, averageRebuyDollars: totalRebuys * params.bankrollStart / divisor,
     averageWins: (totalGames - categoryTotals.nothing) / divisor,
   };
 }
@@ -305,6 +312,7 @@ function readParams(overrides = {}) {
     bankrollStart: Number(overrides.bankrollStart ?? $("bankroll-start").value),
     bankrollWalk: Number(overrides.bankrollWalk ?? $("bankroll-walk").value),
     bankrollMin: Number(overrides.bankrollMin ?? $("bankroll-min").value),
+    rebuy: Boolean(overrides.rebuy ?? $("rebuy").checked),
   };
 }
 
@@ -333,9 +341,10 @@ function renderResults(r) {
   const netClass = r.averageNet >= 0 ? "positive" : "negative";
   const stats = [
     ["Avg. games", number(r.averageGames)], ["Avg. play time", formatPlayTime(r.averageGames)], ["Avg. ending", money(r.averageEnding)],
-    ["Avg. total bet", money(r.averageBet)], ["Avg. returned", money(r.averageReturned)],
+    [r.sets === 1 ? "Total $ played" : "Avg. total $ played", money(r.averageBet)], ["Average bet", money(r.averageWager)], ["Avg. returned", money(r.averageReturned)],
     ["Avg. net", `${r.averageNet >= 0 ? "+" : "−"}${money(Math.abs(r.averageNet))}`, netClass],
-    ["Return", percent(r.averageReturned / r.averageBet)],
+    ["Return", percent(r.averageReturned / r.averageBet)], ["Avg. rebuys", number(r.averageRebuys)],
+    ["Avg. rebuy added", money(r.averageRebuyDollars)],
   ];
   $("stat-grid").innerHTML = stats.map(([label, value, cls = ""]) => `<div class="stat ${cls}"><span>${label}</span><strong>${value}</strong></div>`).join("");
   $("chart-title").textContent = r.sets === 1 ? "Bankroll by hand" : `Average bankroll across ${r.sets.toLocaleString()} sets`;
@@ -352,13 +361,13 @@ function textReport(r) {
   const lines = [
     `Sets:              ${r.sets.toLocaleString()}`, `Games per set:      up to ${r.games.toLocaleString()}`,
     `Avg games played: ${number(r.averageGames)}`, `Avg play time:     ${formatPlayTime(r.averageGames)} (${CONFIG.secondsPerGame} sec/game)`, `RNG seed:           ${r.seed}`,
-    `Betting mode:      ${r.mode} - ${MODES[r.mode][0]}`, `Pay table:         ${r.payTable} Bonus Poker`, `Denomination:       ${money(r.denom)}`,
+    `Betting mode:      ${r.mode} - ${MODES[r.mode][0]}`, `Pay table:         ${r.payTable} Bonus Poker`, `Rebuy:             ${r.rebuy ? "enabled" : "disabled"}`, `Denomination:       ${money(r.denom)}`,
   ];
   if (r.mode === 0) lines.push(`Credit per game:    ${r.credit}`, `Bet per game:       ${money(r.denom * r.credit)}`);
-  lines.push(`Avg total bet:      ${money(r.averageBet)}`, `Avg total returned: ${money(r.averageReturned)}`,
+  lines.push(`${r.sets === 1 ? "Total $ played:" : "Avg total $ played:".padEnd(20)} ${money(r.averageBet)}`, `Average bet:        ${money(r.averageWager)}`, `Avg total returned: ${money(r.averageReturned)}`,
     `Avg net:            ${money(r.averageNet)}`, `Return:             ${percent(r.averageReturned / r.averageBet)}`,
     `Avg winning hands: ${number(r.averageWins)} (${percent(r.averageWins / r.averageGames, 4)})`, "", "Bankroll:",
-    `  Starting balance: ${money(r.bankrollStart)}`, `  Ending balance:   ${money(r.averageEnding)}`, "", "Set outcomes:");
+    `  Starting balance: ${money(r.bankrollStart)}`, `  Ending balance:   ${money(r.averageEnding)}`, `  Avg rebuys:       ${number(r.averageRebuys)}`, `  Avg rebuy added:  ${money(r.averageRebuyDollars)}`, "", "Set outcomes:");
   Object.entries(r.outcomes).forEach(([reason, count]) => lines.push(`  ${reason}: ${count} (${percent(count / r.sets, 2)})`));
   lines.push("", "Average credit levels:");
   [1, 2, 3, 4, 5].forEach(level => lines.push(`  Level ${level}: ${number(r.averageCredits[level])} (${percent(r.averageCredits[level] / r.averageGames, 4)})`));
@@ -433,13 +442,13 @@ function registerWebMcp() {
         games: { type: "integer", minimum: 1, maximum: 100000 }, sets: { type: "integer", minimum: 1 },
         mode: { type: "integer", minimum: 0, maximum: 5 }, payTable: { type: "string", enum: ["8/5", "7/5", "6/5"] }, credit: { type: "integer", minimum: 1, maximum: 5 },
         denom: { type: "number", exclusiveMinimum: 0 }, seed: { type: "integer", minimum: 0 },
-        bankrollStart: { type: "number", exclusiveMinimum: 0 }, bankrollWalk: { type: "number", exclusiveMinimum: 0 }, bankrollMin: { type: "number", minimum: 0 },
-      }, required: ["games", "sets", "mode", "payTable", "credit", "denom", "bankrollStart", "bankrollWalk", "bankrollMin"], additionalProperties: false },
+        bankrollStart: { type: "number", exclusiveMinimum: 0 }, bankrollWalk: { type: "number", exclusiveMinimum: 0 }, bankrollMin: { type: "number", minimum: 0 }, rebuy: { type: "boolean" },
+      }, required: ["games", "sets", "mode", "payTable", "credit", "denom", "bankrollStart", "bankrollWalk", "bankrollMin", "rebuy"], additionalProperties: false },
       annotations: { readOnlyHint: false, untrustedContentHint: false },
       async execute(input) {
         const params = readParams(input); Object.entries(input).forEach(([key, value]) => {
           const ids = { payTable: "pay-table", bankrollStart: "bankroll-start", bankrollWalk: "bankroll-walk", bankrollMin: "bankroll-min" };
-          const node = $(ids[key] || key); if (node) node.value = value;
+          const node = $(ids[key] || key); if (node) { if (node.type === "checkbox") node.checked = value; else node.value = value; }
         }); updateModeCard(); updatePlayTimeEstimate(); const result = await executeSimulation(params);
         return { sets: result.sets, averageGames: result.averageGames, averageEndingBankroll: result.averageEnding, averageNet: result.averageNet, returnPercent: result.averageReturned / result.averageBet * 100 };
       },
