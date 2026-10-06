@@ -4,7 +4,7 @@ import vm from "node:vm";
 import { webcrypto } from "node:crypto";
 
 const values = {
-  games: "10", sets: "1", mode: "0", credit: "5", denom: "1", seed: "42",
+  games: "10", sets: "1", mode: "0", "pay-table": "8/5", credit: "5", denom: "1", seed: "42",
   "bankroll-start": "1000", "bankroll-walk": "1300", "bankroll-min": "1",
 };
 const nodes = new Map();
@@ -21,9 +21,9 @@ const context = vm.createContext({
   window: { addEventListener() {}, devicePixelRatio: 1 },
 });
 let source = fs.readFileSync(new URL("./dist/app.js", import.meta.url), "utf8");
-source += "\nglobalThis.testApi = { handCategory, chooseHold, nextCredit, runExperiment, formatPlayTime };";
+source += "\nglobalThis.testApi = { handCategory, chooseHold, nextCredit, runExperiment, formatPlayTime, PAYTABLES };";
 vm.runInContext(source, context);
-const { handCategory, chooseHold, nextCredit, runExperiment, formatPlayTime } = context.testApi;
+const { handCategory, chooseHold, nextCredit, runExperiment, formatPlayTime, PAYTABLES } = context.testApi;
 
 const categories = {
   royal_flush: ["Ts", "Js", "Qs", "Ks", "As"], straight_flush: ["5h", "6h", "7h", "8h", "9h"],
@@ -51,7 +51,10 @@ assert.equal(nextCredit(3, "two_pair", 5), 4);
 assert.equal(nextCredit(4, "two_pair", 4), 5);
 assert.equal(nextCredit(5, "nothing", 4), 5);
 assert.equal(formatPlayTime(2000), "2 hr 46 min 40 sec");
-const params = { games: 10, sets: 2, mode: 0, credit: 1, denom: 1, seed: 42, bankrollStart: 1000, bankrollWalk: 1300, bankrollMin: 1 };
+assert.deepEqual([...PAYTABLES["8/5"].full_house], [8, 16, 24, 32, 40]);
+assert.deepEqual([...PAYTABLES["7/5"].full_house], [7, 14, 21, 28, 35]);
+assert.deepEqual([...PAYTABLES["6/5"].full_house], [6, 12, 18, 24, 30]);
+const params = { games: 10, sets: 2, mode: 0, payTable: "8/5", credit: 1, denom: 1, seed: 42, bankrollStart: 1000, bankrollWalk: 1300, bankrollMin: 1 };
 const first = await runExperiment(params);
 const second = await runExperiment(params);
 assert.equal(first.averageBet, 10);
