@@ -164,8 +164,10 @@ function chooseHold(hand, credit = 5) {
     [["9JQK", "TJQA", "TJKA", "TQKA"], null],
   ];
   for (const [patterns, suited] of ordered) { found = firstPattern(hand, patterns, suited); if (found) return found; }
+  found = findPattern(hand, "JQK"); if (found) return found;
+  found = findPattern(hand, "JQ", false); if (found) return found.filter(i => hand[i][0] === "J");
   const remaining = [
-    [["JQK"], null], [["JQ"], false], [["TJ"], true],
+    [["TJ"], true],
     [["JK", "QK"], false], [["JA", "QA", "KA"], false],
     [["TQ"], true], [["TK"], true], [["A"], null], [["K"], null], [["Q"], null], [["J"], null],
   ];
