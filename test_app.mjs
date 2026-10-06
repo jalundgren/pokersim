@@ -10,7 +10,7 @@ const values = {
 const nodes = new Map();
 function node(id) {
   if (!nodes.has(id)) nodes.set(id, {
-    value: values[id] ?? "", hidden: false, disabled: false, textContent: "", innerHTML: "",
+    value: values[id] ?? "", checked: false, type: id === "rebuy" ? "checkbox" : "text", hidden: false, disabled: false, textContent: "", innerHTML: "",
     addEventListener() {}, scrollIntoView() {}, getBoundingClientRect() { return { width: 900, height: 360 }; },
   });
   return nodes.get(id);
@@ -54,10 +54,18 @@ assert.equal(formatPlayTime(2000), "2 hr 46 min 40 sec");
 assert.deepEqual([...PAYTABLES["8/5"].full_house], [8, 16, 24, 32, 40]);
 assert.deepEqual([...PAYTABLES["7/5"].full_house], [7, 14, 21, 28, 35]);
 assert.deepEqual([...PAYTABLES["6/5"].full_house], [6, 12, 18, 24, 30]);
-const params = { games: 10, sets: 2, mode: 0, payTable: "8/5", credit: 1, denom: 1, seed: 42, bankrollStart: 1000, bankrollWalk: 1300, bankrollMin: 1 };
+const params = { games: 10, sets: 2, mode: 0, payTable: "8/5", credit: 1, denom: 1, seed: 42, bankrollStart: 1000, bankrollWalk: 1300, bankrollMin: 1, rebuy: false };
 const first = await runExperiment(params);
 const second = await runExperiment(params);
 assert.equal(first.averageBet, 10);
 assert.deepEqual(first.averageCategories, second.averageCategories);
 assert.equal(first.averageHistory.length, 11);
+const rebuyRun = await runExperiment({
+  ...params, games: 20, sets: 1, seed: 42, bankrollStart: 10,
+  bankrollWalk: 100, bankrollMin: 9.99, rebuy: true,
+});
+assert.ok(rebuyRun.averageRebuys > 0);
+assert.equal(rebuyRun.averageRebuyDollars,
+  rebuyRun.averageRebuys * rebuyRun.bankrollStart);
+assert.equal(rebuyRun.averageNet, rebuyRun.averageReturned - rebuyRun.averageBet);
 console.log("Browser simulator checks passed");
