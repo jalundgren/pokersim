@@ -37,6 +37,9 @@ for (const [expected, hand] of Object.entries(categories)) assert.equal(handCate
 assert.deepEqual([...chooseHold(["Ts", "Js", "Qs", "Ks", "As"])], [0, 1, 2, 3, 4]);
 assert.deepEqual([...chooseHold(["Ts", "Js", "Qs", "Ks", "2s"])], [0, 1, 2, 3]);
 assert.deepEqual([...chooseHold(["2c", "2d", "8h", "Ts", "Kc"])], [0, 1]);
+assert.deepEqual([...chooseHold(["9s", "Js", "Qs", "2c", "4d"])], [1, 2]);
+assert.deepEqual([...chooseHold(["9s", "Qs", "Ks", "2c", "4d"])], [1, 2]);
+assert.deepEqual([...chooseHold(["As", "2s", "3s", "8c", "9d"])], [0]);
 assert.equal(nextCredit(1, "nothing", 4), 5);
 assert.equal(nextCredit(1, "nothing", 5), 5);
 assert.equal(nextCredit(2, "two_pair", 4), 5);

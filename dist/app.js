@@ -141,14 +141,14 @@ function chooseHold(hand, credit = 5) {
   found = findPattern(hand, "TJQK"); if (found) return found;
   const lowPair = [...RANKS.slice(0, 9)].find(rank => counts[rank] === 2); if (lowPair) return all.filter(i => hand[i][0] === lowPair);
   const ordered = [
-    [["9TJQ", "89TJ"], null], [["9JQ"], true], [["9TJ"], true], [["2345", "3456", "4567", "5678", "6789", "789T"], null],
-    [["JQ"], true], [["JQKA"], null], [["8JQ", "9QK", "9JK"], true], [["89J", "8TJ"], true],
+    [["9TJQ", "89TJ"], null], [["9TJ"], true], [["2345", "3456", "4567", "5678", "6789", "789T"], null],
+    [["JQ"], true], [["JQKA"], null], [["89J", "8TJ"], true],
     [["JK", "QK"], true], [["JA", "QA", "KA"], true], [["345", "456", "567", "678", "789", "89T"], true],
     [["9JQK", "TJQA", "TJKA", "TQKA"], null],
   ];
   for (const [patterns, suited] of ordered) { found = firstPattern(hand, patterns, suited); if (found) return found; }
   const remaining = [
-    [["JQK"], null], [["JQ"], false], [["TJ"], true], [["A23", "A24", "A25", "A34", "A35", "A45", "78J", "79J", "7TJ", "89Q", "8TQ", "9TK"], true],
+    [["JQK"], null], [["JQ"], false], [["TJ"], true],
     [["JK", "QK"], false], [["JA", "QA", "KA"], false], [["A"], null],
     [["234", "235", "245", "346", "356", "457", "467", "568", "578", "679", "689", "78T", "79T"], true],
     [["J"], null], [["TQ"], true], [["Q"], null], [["K"], null], [["TK"], true],
