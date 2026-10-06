@@ -37,11 +37,12 @@ for (const [expected, hand] of Object.entries(categories)) assert.equal(handCate
 assert.deepEqual([...chooseHold(["Ts", "Js", "Qs", "Ks", "As"])], [0, 1, 2, 3, 4]);
 assert.deepEqual([...chooseHold(["Ts", "Js", "Qs", "Ks", "2s"])], [0, 1, 2, 3]);
 assert.deepEqual([...chooseHold(["2c", "2d", "8h", "Ts", "Kc"])], [0, 1]);
-assert.equal(nextCredit(1, "nothing", 3), 4);
-assert.equal(nextCredit(2, "two_pair", 3), 4);
-assert.equal(nextCredit(3, "two_pair", 4), 3);
-assert.equal(nextCredit(4, "two_pair", 2), 4);
-assert.equal(nextCredit(5, "nothing", 2), 4);
+assert.equal(nextCredit(1, "nothing", 4), 5);
+assert.equal(nextCredit(1, "nothing", 5), 5);
+assert.equal(nextCredit(2, "two_pair", 4), 5);
+assert.equal(nextCredit(3, "two_pair", 5), 4);
+assert.equal(nextCredit(4, "two_pair", 4), 5);
+assert.equal(nextCredit(5, "nothing", 4), 5);
 const params = { games: 10, sets: 2, mode: 0, credit: 1, denom: 1, seed: 42, bankrollStart: 1000, bankrollWalk: 1300, bankrollMin: 1 };
 const first = await runExperiment(params);
 const second = await runExperiment(params);

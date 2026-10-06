@@ -5,16 +5,16 @@ const CONFIG = {
   maxTotalGames: 1000000,
   secondsPerGame: 5,
   ladderMin: 1,
-  ladderMax: 4,
+  ladderMax: 5,
 };
 
 const MODES = {
   0: ["No Ladder", "Bet the same number of credits every hand, regardless of the previous result."],
-  1: ["Loss Ladder", "Start at 1 credit, move up after each loss to 4, then reset to 1 after a win."],
-  2: ["Win Ladder", "Start at 1 credit, move up after each win to 4, then reset to 1 after a loss."],
-  3: ["D'Alembert Ladder", "Start at 1 credit, move up after a loss and down after a win, staying between 1 and 4."],
-  4: ["Aggressive Win Ladder", "Start at 1 credit and advance 1 → 2 → 4 after wins, resetting after any loss."],
-  5: ["Aggressive Loss Ladder", "Start at 1 credit and advance 1 → 2 → 4 after losses, resetting after any win."],
+  1: ["Loss Ladder", "Start at 1 credit, move up after each loss to 5, then reset to 1 after a win."],
+  2: ["Win Ladder", "Start at 1 credit, move up after each win to 5, then reset to 1 after a loss."],
+  3: ["D'Alembert Ladder", "Start at 1 credit, move up after a loss and down after a win, staying between 1 and 5."],
+  4: ["Aggressive Win Ladder", "Start at 1 credit and advance 1 → 2 → 4 → 5 after wins, resetting after any loss."],
+  5: ["Aggressive Loss Ladder", "Start at 1 credit and advance 1 → 2 → 4 → 5 after losses, resetting after any win."],
 };
 
 const RANKS = "23456789TJQKA";
@@ -161,11 +161,11 @@ function chooseHold(hand, credit = 5) {
 function nextCredit(mode, category, credit) {
   if (mode === 0) return credit;
   const won = category !== "nothing";
-  if (mode === 1) return won ? 1 : Math.min(credit + 1, 4);
-  if (mode === 2) return won ? Math.min(credit + 1, 4) : 1;
-  if (mode === 3) return won ? Math.max(credit - 1, 1) : Math.min(credit + 1, 4);
-  if (mode === 4) return won ? Math.min(credit * 2, 4) : 1;
-  return won ? 1 : Math.min(credit * 2, 4);
+  if (mode === 1) return won ? 1 : Math.min(credit + 1, CONFIG.ladderMax);
+  if (mode === 2) return won ? Math.min(credit + 1, CONFIG.ladderMax) : 1;
+  if (mode === 3) return won ? Math.max(credit - 1, CONFIG.ladderMin) : Math.min(credit + 1, CONFIG.ladderMax);
+  if (mode === 4) return won ? Math.min(credit * 2, CONFIG.ladderMax) : 1;
+  return won ? 1 : Math.min(credit * 2, CONFIG.ladderMax);
 }
 
 function makeRng(seed) {
