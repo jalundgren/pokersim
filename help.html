@@ -27,7 +27,7 @@
         <a href="#seed">Using a seed</a>
         <a href="#results">Reading results</a>
         <a href="#paytable">Paytable</a>
-        <a href="#strategy">45-rule hold strategy</a>
+        <a href="#strategy">37-rule hold strategy</a>
       </nav>
 
       <article class="help-content">
@@ -35,7 +35,7 @@
           <span class="step">01</span>
           <p class="eyebrow">Overview</p>
           <h2>What the simulator models</h2>
-          <p>This simulator deals independent hands of 8/5 Bonus Poker from a fresh 52-card deck. It chooses cards to hold using a fixed, ordered 45-rule strategy chart, draws replacement cards, evaluates the final hand, and applies the paytable below.</p>
+          <p>This simulator deals independent hands of 8/5 Bonus Poker from a fresh 52-card deck. It chooses cards to hold using a fixed, ordered 37-rule strategy chart, draws replacement cards, evaluates the final hand, and applies the paytable below.</p>
           <div class="callout"><strong>This is not an AI model.</strong> The hold decision is deterministic: rules are checked from first to last, and the first matching rule wins.</div>
           <p>A <strong>win</strong> means any final category with a non-zero paytable return, including Jacks or Better. A final category of <strong>Nothing</strong> is a loss. Betting ladders react to that win/loss definition.</p>
         </section>
@@ -59,11 +59,11 @@
           <span class="step">03</span><p class="eyebrow">Credit progression</p><h2>Betting modes</h2>
           <div class="mode-list">
             <div><b>0</b><h3>No Ladder</h3><p>Uses the selected fixed credit on every hand. Previous wins and losses do not change the next bet.</p><code>selected credit → selected credit</code></div>
-            <div><b>1</b><h3>Loss Ladder</h3><p>Moves up one level after a loss, remains at 4 after further losses, and resets to 1 after any win.</p><code>1 → 2 → 3 → 4</code></div>
-            <div><b>2</b><h3>Win Ladder</h3><p>Moves up one level after a win, remains at 4 after further wins, and resets to 1 after any loss.</p><code>1 → 2 → 3 → 4</code></div>
-            <div><b>3</b><h3>D'Alembert Ladder</h3><p>Moves up one credit after a loss and down one credit after a win, staying within the 1–4 range.</p><code>loss +1 · win −1</code></div>
-            <div><b>4</b><h3>Aggressive Win Ladder</h3><p>Advances more quickly after wins, remains at 4 after further wins, and resets to 1 after any loss.</p><code>1 → 2 → 4</code></div>
-            <div><b>5</b><h3>Aggressive Loss Ladder</h3><p>Advances more quickly after losses, remains at 4 after further losses, and resets to 1 after any win.</p><code>1 → 2 → 4</code></div>
+            <div><b>1</b><h3>Loss Ladder</h3><p>Moves up one level after a loss, remains at 5 after further losses, and resets to 1 after any win.</p><code>1 → 2 → 3 → 4 → 5</code></div>
+            <div><b>2</b><h3>Win Ladder</h3><p>Moves up one level after a win, remains at 5 after further wins, and resets to 1 after any loss.</p><code>1 → 2 → 3 → 4 → 5</code></div>
+            <div><b>3</b><h3>D'Alembert Ladder</h3><p>Moves up one credit after a loss and down one credit after a win, staying within the 1–5 range.</p><code>loss +1 · win −1</code></div>
+            <div><b>4</b><h3>Aggressive Win Ladder</h3><p>Advances more quickly after wins, remains at 5 after further wins, and resets to 1 after any loss.</p><code>1 → 2 → 4 → 5</code></div>
+            <div><b>5</b><h3>Aggressive Loss Ladder</h3><p>Advances more quickly after losses, remains at 5 after further losses, and resets to 1 after any win.</p><code>1 → 2 → 4 → 5</code></div>
           </div>
           <div class="callout warning"><strong>Important:</strong> a betting progression changes bet exposure, volatility, and the probability of reaching a stopping target. It does not change the underlying expected return of a credit wagered.</div>
         </section>
@@ -115,20 +115,19 @@
         </section>
 
         <section id="strategy" class="help-section">
-          <span class="step">07</span><p class="eyebrow">First match wins</p><h2>45-rule hold strategy</h2>
+          <span class="step">07</span><p class="eyebrow">First match wins</p><h2>37-rule hold strategy</h2>
           <p>Starting with Rule 1, hold the first pattern found. “Suited” means all listed cards share a suit. “Unsuited” excludes the suited version. The final rule discards all five cards.</p>
           <ol class="strategy-list">
-            <li>Pat Royal Flush.</li><li>Pat Straight Flush.</li><li>Four Aces, discarding the kicker.</li><li>Any other Four of a Kind, discarding the kicker.</li>
-            <li>Four suited cards from T–J–Q–K–A.</li><li>Pat Full House.</li><li>Three Aces.</li><li>Pat Flush.</li><li>Any other Three of a Kind.</li><li>Pat Straight.</li>
+            <li>Royal Flush.</li><li>Straight Flush.</li><li>Four Aces, discarding the kicker.</li><li>Any other Four of a Kind, discarding the kicker.</li>
+            <li>Four suited cards from T–J–Q–K–A.</li><li>Full House.</li><li>Three Aces.</li><li>Flush.</li><li>Any other Three of a Kind.</li><li>Straight.</li>
             <li>Four-card Straight Flush with no gap.</li><li>Two Pair.</li><li>Four-card Straight Flush with a gap.</li><li>Pair of Jacks, Queens, Kings, or Aces.</li>
-            <li>Three suited cards from T–J–Q–K–A.</li><li>Four cards to a Flush.</li><li>T–J–Q–K.</li><li>Low Pair: 2s through 10s.</li>
-            <li>9–T–J–Q or 8–9–T–J.</li><li>Suited 9–J–Q.</li><li>Suited 9–T–J.</li><li>Four-card open Straight: 2345 through 789T.</li>
-            <li>Suited J–Q.</li><li>J–Q–K–A.</li><li>Suited 8–J–Q, 9–Q–K, or 9–J–K.</li><li>Suited 8–9–J or 8–T–J.</li>
-            <li>Suited J–K or Q–K.</li><li>Suited J–A, Q–A, or K–A.</li><li>Suited 345, 456, 567, 678, 789, or 89T.</li><li>9–J–Q–K, T–J–Q–A, T–J–K–A, or T–Q–K–A.</li>
-            <li>J–Q–K.</li><li>Unsuited J–Q.</li><li>Suited T–J.</li><li>Suited A23, A24, A25, A34, A35, A45, 78J, 79J, 7TJ, 89Q, 8TQ, or 9TK.</li>
-            <li>Unsuited J–K or Q–K.</li><li>Unsuited J–A, Q–A, or K–A.</li><li>Single Ace.</li><li>Suited 234, 235, 245, 346, 356, 457, 467, 568, 578, 679, 689, 78T, or 79T.</li>
-            <li>Single Jack.</li><li>Suited T–Q.</li><li>Single Queen.</li><li>Single King.</li><li>Suited T–K.</li>
-            <li>Suited 236, 246, 256, 347, 357, 367, 458, 468, 478, 569, 579, 589, 67T, 68T, or 69T.</li><li>Discard all cards.</li>
+            <li>Three suited cards from T–J–Q–K–A.</li><li>Four cards to a Flush.</li><li>Any four-card, no-gap Straight from A–2–3–4 through J–Q–K–A, regardless of suits.</li><li>Low Pair: 2s through 10s.</li>
+            <li>Suited 9–T–J.</li><li>Suited J–Q.</li><li>Suited 8–9–J or 8–T–J.</li>
+            <li>Suited J–K or Q–K.</li><li>Suited J–A, Q–A, or K–A.</li><li>9–J–Q–K, T–J–Q–A, T–J–K–A, or T–Q–K–A.</li>
+            <li>J–Q–K.</li><li>Unsuited J–Q: hold only the Jack.</li><li>Suited T–J.</li>
+            <li>Unsuited J–K or Q–K.</li><li>Unsuited J–A, Q–A, or K–A.</li><li>Suited T–Q.</li><li>Suited T–K.</li>
+            <li>Single Ace.</li><li>Single King.</li><li>Single Queen.</li><li>Single Jack.</li>
+            <li>Any three suited cards contained in a five-rank Straight window, allowing up to two gaps—for example, suited 3–5–7.</li><li>Discard all cards.</li>
           </ol>
         </section>
       </article>

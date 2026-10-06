@@ -5,16 +5,16 @@ const CONFIG = {
   maxTotalGames: 1000000,
   secondsPerGame: 5,
   ladderMin: 1,
-  ladderMax: 4,
+  ladderMax: 5,
 };
 
 const MODES = {
   0: ["No Ladder", "Bet the same number of credits every hand, regardless of the previous result."],
-  1: ["Loss Ladder", "Start at 1 credit, move up after each loss to 4, then reset to 1 after a win."],
-  2: ["Win Ladder", "Start at 1 credit, move up after each win to 4, then reset to 1 after a loss."],
-  3: ["D'Alembert Ladder", "Start at 1 credit, move up after a loss and down after a win, staying between 1 and 4."],
-  4: ["Aggressive Win Ladder", "Start at 1 credit and advance 1 → 2 → 4 after wins, resetting after any loss."],
-  5: ["Aggressive Loss Ladder", "Start at 1 credit and advance 1 → 2 → 4 after losses, resetting after any win."],
+  1: ["Loss Ladder", "Start at 1 credit, move up after each loss to 5, then reset to 1 after a win."],
+  2: ["Win Ladder", "Start at 1 credit, move up after each win to 5, then reset to 1 after a loss."],
+  3: ["D'Alembert Ladder", "Start at 1 credit, move up after a loss and down after a win, staying between 1 and 5."],
+  4: ["Aggressive Win Ladder", "Start at 1 credit and advance 1 → 2 → 4 → 5 after wins, resetting after any loss."],
+  5: ["Aggressive Loss Ladder", "Start at 1 credit and advance 1 → 2 → 4 → 5 after losses, resetting after any win."],
 };
 
 const RANKS = "23456789TJQKA";
@@ -105,6 +105,24 @@ function fourToStraightFlush(hand, noGap) {
   return null;
 }
 
+function fourCardStraight(hand) {
+  const windows = ["A234", "2345", "3456", "4567", "5678", "6789", "789T", "89TJ", "9TJQ", "TJQK", "JQKA"].map(x => new Set(x));
+  for (const indices of combinations([0, 1, 2, 3, 4], 4)) {
+    const ranks = new Set(indices.map(i => hand[i][0]));
+    if (windows.some(window => sameSet(ranks, window))) return indices;
+  }
+  return null;
+}
+
+function threeCardStraightFlush(hand) {
+  for (const indices of combinations([0, 1, 2, 3, 4], 3)) {
+    const cards = indices.map(i => hand[i]);
+    const ranks = new Set(cards.map(card => card[0]));
+    if (new Set(cards.map(card => card[1])).size === 1 && STRAIGHT_WINDOWS.some(window => subset(ranks, window))) return indices;
+  }
+  return null;
+}
+
 function firstPattern(hand, patterns, suited = null) {
   for (const pattern of patterns) { const found = findPattern(hand, pattern, suited); if (found) return found; }
   return null;
@@ -138,34 +156,34 @@ function chooseHold(hand, credit = 5) {
     if (new Set(cards.map(c => c[1])).size === 1 && subset(new Set(cards.map(c => c[0])), new Set("TJQKA"))) return indices;
   }
   for (const suit of SUITS) { const indices = all.filter(i => hand[i][1] === suit); if (indices.length === 4) return indices; }
-  found = findPattern(hand, "TJQK"); if (found) return found;
+  found = fourCardStraight(hand); if (found) return found;
   const lowPair = [...RANKS.slice(0, 9)].find(rank => counts[rank] === 2); if (lowPair) return all.filter(i => hand[i][0] === lowPair);
   const ordered = [
-    [["9TJQ", "89TJ"], null], [["9JQ"], true], [["9TJ"], true], [["2345", "3456", "4567", "5678", "6789", "789T"], null],
-    [["JQ"], true], [["JQKA"], null], [["8JQ", "9QK", "9JK"], true], [["89J", "8TJ"], true],
-    [["JK", "QK"], true], [["JA", "QA", "KA"], true], [["345", "456", "567", "678", "789", "89T"], true],
+    [["9TJ"], true], [["JQ"], true], [["89J", "8TJ"], true],
+    [["JK", "QK"], true], [["JA", "QA", "KA"], true],
     [["9JQK", "TJQA", "TJKA", "TQKA"], null],
   ];
   for (const [patterns, suited] of ordered) { found = firstPattern(hand, patterns, suited); if (found) return found; }
+  found = findPattern(hand, "JQK"); if (found) return found;
+  found = findPattern(hand, "JQ", false); if (found) return found.filter(i => hand[i][0] === "J");
   const remaining = [
-    [["JQK"], null], [["JQ"], false], [["TJ"], true], [["A23", "A24", "A25", "A34", "A35", "A45", "78J", "79J", "7TJ", "89Q", "8TQ", "9TK"], true],
-    [["JK", "QK"], false], [["JA", "QA", "KA"], false], [["A"], null],
-    [["234", "235", "245", "346", "356", "457", "467", "568", "578", "679", "689", "78T", "79T"], true],
-    [["J"], null], [["TQ"], true], [["Q"], null], [["K"], null], [["TK"], true],
-    [["236", "246", "256", "347", "357", "367", "458", "468", "478", "569", "579", "589", "67T", "68T", "69T"], true],
+    [["TJ"], true],
+    [["JK", "QK"], false], [["JA", "QA", "KA"], false],
+    [["TQ"], true], [["TK"], true], [["A"], null], [["K"], null], [["Q"], null], [["J"], null],
   ];
   for (const [patterns, suited] of remaining) { found = firstPattern(hand, patterns, suited); if (found) return found; }
+  found = threeCardStraightFlush(hand); if (found) return found;
   return [];
 }
 
 function nextCredit(mode, category, credit) {
   if (mode === 0) return credit;
   const won = category !== "nothing";
-  if (mode === 1) return won ? 1 : Math.min(credit + 1, 4);
-  if (mode === 2) return won ? Math.min(credit + 1, 4) : 1;
-  if (mode === 3) return won ? Math.max(credit - 1, 1) : Math.min(credit + 1, 4);
-  if (mode === 4) return won ? Math.min(credit * 2, 4) : 1;
-  return won ? 1 : Math.min(credit * 2, 4);
+  if (mode === 1) return won ? 1 : Math.min(credit + 1, CONFIG.ladderMax);
+  if (mode === 2) return won ? Math.min(credit + 1, CONFIG.ladderMax) : 1;
+  if (mode === 3) return won ? Math.max(credit - 1, CONFIG.ladderMin) : Math.min(credit + 1, CONFIG.ladderMax);
+  if (mode === 4) return won ? Math.min(credit * 2, CONFIG.ladderMax) : 1;
+  return won ? 1 : Math.min(credit * 2, CONFIG.ladderMax);
 }
 
 function makeRng(seed) {
