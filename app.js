@@ -30,6 +30,11 @@ const PAYTABLE = {
   three_kind: [3, 6, 9, 12, 15], two_pair: [2, 4, 6, 8, 10],
   jacks_or_better: [1, 2, 3, 4, 5], nothing: [0, 0, 0, 0, 0],
 };
+const PAYTABLES = {
+  "8/5": PAYTABLE,
+  "7/5": { ...PAYTABLE, full_house: [7, 14, 21, 28, 35] },
+  "6/5": { ...PAYTABLE, full_house: [6, 12, 18, 24, 30] },
+};
 const STRAIGHT_WINDOWS = ["A2345", "23456", "34567", "45678", "56789", "6789T", "789TJ", "89TJQ", "9TJQK", "TJQKA"].map(x => new Set(x));
 
 const $ = id => document.getElementById(id);
@@ -229,7 +234,7 @@ async function runExperiment(params, onProgress = () => {}) {
       const held = chooseHold(hand, gameCredit);
       const finalHand = held.map(i => hand[i]).concat(deck.slice(5, 5 + 5 - held.length));
       const category = handCategory(finalHand);
-      const payout = PAYTABLE[category][gameCredit - 1] * params.denom;
+      const payout = PAYTABLES[params.payTable][category][gameCredit - 1] * params.denom;
       categories[category]++; levels[gameCredit]++; gamesPlayed++; setBet += bet; setReturned += payout;
       bankroll += payout - bet; history.push(bankroll);
       if (params.mode !== 0) {
@@ -280,6 +285,7 @@ function validateParams(p) {
   if (p.sets < 1) throw new Error("Number of sets must be at least 1.");
   if (p.games * p.sets > CONFIG.maxTotalGames) throw new Error(`Games × sets cannot exceed ${CONFIG.maxTotalGames.toLocaleString()} total hands.`);
   if (p.credit < 1 || p.credit > 5) throw new Error("Credits must be between 1 and 5.");
+  if (!PAYTABLES[p.payTable]) throw new Error("Pay Table must be 8/5, 7/5, or 6/5.");
   if (!(p.denom > 0)) throw new Error("Denomination must be greater than zero.");
   if (!(p.bankrollStart > 0)) throw new Error("Starting bankroll must be greater than zero.");
   if (!(p.bankrollMin >= 0 && p.bankrollMin < p.bankrollStart)) throw new Error("Minimum bankroll must be between zero and the starting bankroll.");
@@ -294,7 +300,7 @@ function readParams(overrides = {}) {
   else throw new Error("Seed must be a non-negative whole number.");
   return {
     games: Number(overrides.games ?? $("games").value), sets: Number(overrides.sets ?? $("sets").value),
-    mode: Number(overrides.mode ?? $("mode").value), credit: Number(overrides.credit ?? $("credit").value),
+    mode: Number(overrides.mode ?? $("mode").value), payTable: String(overrides.payTable ?? $("pay-table").value), credit: Number(overrides.credit ?? $("credit").value),
     denom: Number(overrides.denom ?? $("denom").value), seed,
     bankrollStart: Number(overrides.bankrollStart ?? $("bankroll-start").value),
     bankrollWalk: Number(overrides.bankrollWalk ?? $("bankroll-walk").value),
@@ -305,6 +311,16 @@ function readParams(overrides = {}) {
 function money(value) { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value); }
 function number(value, digits = 2) { return value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits }); }
 function percent(value, digits = 3) { return `${(value * 100).toFixed(digits)}%`; }
+function formatPlayTime(games) {
+  let seconds = Math.round(games * CONFIG.secondsPerGame);
+  const hours = Math.floor(seconds / 3600); seconds %= 3600;
+  const minutes = Math.floor(seconds / 60); seconds %= 60;
+  const parts = [];
+  if (hours) parts.push(`${hours.toLocaleString()} hr`);
+  if (minutes || hours) parts.push(`${minutes} min`);
+  parts.push(`${seconds} sec`);
+  return parts.join(" ");
+}
 function titleCategory(key) { return key.split("_").map(word => word[0].toUpperCase() + word.slice(1)).join(" "); }
 
 function renderTable(target, rows) {
@@ -313,10 +329,10 @@ function renderTable(target, rows) {
 
 function renderResults(r) {
   $("results").hidden = false;
-  $("result-context").textContent = `${r.sets.toLocaleString()} ${r.sets === 1 ? "set" : "sets"} · seed ${r.seed}`;
+  $("result-context").textContent = `${r.payTable} pay table · ${r.sets.toLocaleString()} ${r.sets === 1 ? "set" : "sets"} · seed ${r.seed}`;
   const netClass = r.averageNet >= 0 ? "positive" : "negative";
   const stats = [
-    ["Avg. games", number(r.averageGames)], ["Avg. ending", money(r.averageEnding)],
+    ["Avg. games", number(r.averageGames)], ["Avg. play time", formatPlayTime(r.averageGames)], ["Avg. ending", money(r.averageEnding)],
     ["Avg. total bet", money(r.averageBet)], ["Avg. returned", money(r.averageReturned)],
     ["Avg. net", `${r.averageNet >= 0 ? "+" : "−"}${money(Math.abs(r.averageNet))}`, netClass],
     ["Return", percent(r.averageReturned / r.averageBet)],
@@ -335,8 +351,8 @@ function renderResults(r) {
 function textReport(r) {
   const lines = [
     `Sets:              ${r.sets.toLocaleString()}`, `Games per set:      up to ${r.games.toLocaleString()}`,
-    `Avg games played: ${number(r.averageGames)}`, `RNG seed:           ${r.seed}`,
-    `Betting mode:      ${r.mode} - ${MODES[r.mode][0]}`, `Denomination:       ${money(r.denom)}`,
+    `Avg games played: ${number(r.averageGames)}`, `Avg play time:     ${formatPlayTime(r.averageGames)} (${CONFIG.secondsPerGame} sec/game)`, `RNG seed:           ${r.seed}`,
+    `Betting mode:      ${r.mode} - ${MODES[r.mode][0]}`, `Pay table:         ${r.payTable} Bonus Poker`, `Denomination:       ${money(r.denom)}`,
   ];
   if (r.mode === 0) lines.push(`Credit per game:    ${r.credit}`, `Bet per game:       ${money(r.denom * r.credit)}`);
   lines.push(`Avg total bet:      ${money(r.averageBet)}`, `Avg total returned: ${money(r.averageReturned)}`,
@@ -391,6 +407,7 @@ form.addEventListener("submit", async event => { event.preventDefault(); try { a
 $("cancel-button").addEventListener("click", () => { cancelRequested = true; $("progress").textContent = "Cancelling…"; });
 $("mode").addEventListener("change", updateModeCard);
 ["bankroll-start", "bankroll-walk"].forEach(id => $(id).addEventListener("input", updateModeCard));
+["games", "sets"].forEach(id => $(id).addEventListener("input", updatePlayTimeEstimate));
 window.addEventListener("resize", () => { if (lastChartHistory) drawChart(lastChartHistory); });
 
 function updateModeCard() {
@@ -399,28 +416,35 @@ function updateModeCard() {
   const start = Number($("bankroll-start").value || 0), walk = Number($("bankroll-walk").value || 0); $("bankroll-rule").textContent = `${money(start)} → ${money(walk)}`;
 }
 
+function updatePlayTimeEstimate() {
+  const games = Number($("games").value), sets = Number($("sets").value);
+  if (!(games > 0) || !(sets > 0)) { $("play-time-estimate").textContent = "Estimated play time unavailable"; return; }
+  const perSet = formatPlayTime(games), total = formatPlayTime(games * sets);
+  $("play-time-estimate").textContent = `Estimated play time: ${perSet} per set${sets > 1 ? ` · ${total} total` : ""}`;
+}
+
 function registerWebMcp() {
   const context = document.modelContext; if (!context?.registerTool) return;
   try {
     context.registerTool({
       name: "run_bonus_poker_simulation", title: "Run Bonus Poker simulation",
-      description: "Configure and run the visible 8/5 Bonus Poker simulation, then display its report and bankroll chart.",
+      description: "Set and run the visible Bonus Poker simulation, then display its report and bankroll chart.",
       inputSchema: { type: "object", properties: {
         games: { type: "integer", minimum: 1, maximum: 100000 }, sets: { type: "integer", minimum: 1 },
-        mode: { type: "integer", minimum: 0, maximum: 5 }, credit: { type: "integer", minimum: 1, maximum: 5 },
+        mode: { type: "integer", minimum: 0, maximum: 5 }, payTable: { type: "string", enum: ["8/5", "7/5", "6/5"] }, credit: { type: "integer", minimum: 1, maximum: 5 },
         denom: { type: "number", exclusiveMinimum: 0 }, seed: { type: "integer", minimum: 0 },
         bankrollStart: { type: "number", exclusiveMinimum: 0 }, bankrollWalk: { type: "number", exclusiveMinimum: 0 }, bankrollMin: { type: "number", minimum: 0 },
-      }, required: ["games", "sets", "mode", "credit", "denom", "bankrollStart", "bankrollWalk", "bankrollMin"], additionalProperties: false },
+      }, required: ["games", "sets", "mode", "payTable", "credit", "denom", "bankrollStart", "bankrollWalk", "bankrollMin"], additionalProperties: false },
       annotations: { readOnlyHint: false, untrustedContentHint: false },
       async execute(input) {
         const params = readParams(input); Object.entries(input).forEach(([key, value]) => {
-          const ids = { bankrollStart: "bankroll-start", bankrollWalk: "bankroll-walk", bankrollMin: "bankroll-min" };
+          const ids = { payTable: "pay-table", bankrollStart: "bankroll-start", bankrollWalk: "bankroll-walk", bankrollMin: "bankroll-min" };
           const node = $(ids[key] || key); if (node) node.value = value;
-        }); updateModeCard(); const result = await executeSimulation(params);
+        }); updateModeCard(); updatePlayTimeEstimate(); const result = await executeSimulation(params);
         return { sets: result.sets, averageGames: result.averageGames, averageEndingBankroll: result.averageEnding, averageNet: result.averageNet, returnPercent: result.averageReturned / result.averageBet * 100 };
       },
     });
   } catch (error) { console.warn("WebMCP registration unavailable", error); }
 }
 
-updateModeCard(); registerWebMcp();
+updateModeCard(); updatePlayTimeEstimate(); registerWebMcp();

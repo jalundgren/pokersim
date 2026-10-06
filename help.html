@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Help & Strategy · Bonus Poker Simulator</title>
-  <meta name="description" content="Strategy, ladder modes, parameters, seeds, and result definitions for the Bonus Poker Simulator.">
+  <meta name="description" content="Strategy, pay tables, ladder modes, parameters, seeds, and result definitions for the Bonus Poker Simulator.">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23081317'/%3E%3Cpath d='M32 10 47 27 32 54 17 27Z' fill='%23efc56b'/%3E%3Ccircle cx='32' cy='29' r='7' fill='%23081317'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -12,7 +12,7 @@
   <main class="shell help-shell">
     <header class="masthead help-masthead">
       <div>
-        <p class="eyebrow">8/5 Bonus Poker</p>
+        <p class="eyebrow">Bonus Poker</p>
         <h1>Help &amp; strategy</h1>
       </div>
       <a class="back-link" href="index.html">Back to simulator</a>
@@ -35,17 +35,18 @@
           <span class="step">01</span>
           <p class="eyebrow">Overview</p>
           <h2>What the simulator models</h2>
-          <p>This simulator deals independent hands of 8/5 Bonus Poker from a fresh 52-card deck. It chooses cards to hold using a fixed, ordered 37-rule strategy chart, draws replacement cards, evaluates the final hand, and applies the paytable below.</p>
+          <p>This simulator deals independent hands of Bonus Poker from a fresh 52-card deck. It uses the same fixed, ordered 37-rule strategy chart for all variants, draws replacement cards, evaluates the final hand, and applies the selected 8/5, 7/5, or 6/5 pay table.</p>
           <div class="callout"><strong>This is not an AI model.</strong> The hold decision is deterministic: rules are checked from first to last, and the first matching rule wins.</div>
           <p>A <strong>win</strong> means any final category with a non-zero paytable return, including Jacks or Better. A final category of <strong>Nothing</strong> is a loss. Betting ladders react to that win/loss definition.</p>
         </section>
 
         <section id="parameters" class="help-section">
-          <span class="step">02</span><p class="eyebrow">Inputs</p><h2>Parameter guide</h2>
+          <span class="step">02</span><p class="eyebrow">Settings</p><h2>Settings guide</h2>
           <div class="definition-grid">
-            <div><h3>Games per set</h3><p>The maximum number of hands in each set. A bankroll threshold can stop a set earlier. Range: 1–100,000.</p></div>
+            <div><h3>Games per set</h3><p>The maximum number of hands in each set. A bankroll threshold can stop a set earlier. Estimated play time uses 5 seconds per hand. Range: 1–100,000.</p></div>
             <div><h3>Number of sets</h3><p>How many independent sessions to run. Total requested hands—games × sets—cannot exceed 1,000,000.</p></div>
             <div><h3>Betting mode</h3><p>Selects fixed-credit play or one of five credit progressions. Modes 1–5 always begin at 1 credit.</p></div>
+            <div><h3>Pay Table</h3><p>Selects 8/5 Full Pay, 7/5, or 6/5 Bonus Poker. The first number is the Full House payout; the second is the Flush payout.</p></div>
             <div><h3>Credits per bet</h3><p>The number of credits used on every hand in Mode 0. Modes 1–5 ignore this input because the ladder controls credits.</p></div>
             <div><h3>Denomination</h3><p>The cash value of one credit. The hand’s bet is <strong>denomination × credits</strong>.</p></div>
             <div><h3>Seed</h3><p>An optional whole number used to reproduce an experiment. Leave it blank for a fresh random seed.</p></div>
@@ -94,23 +95,19 @@
         </section>
 
         <section id="paytable" class="help-section">
-          <span class="step">06</span><p class="eyebrow">8/5 Bonus Poker</p><h2>Paytable</h2>
-          <div class="table-scroll"><table class="help-table">
-            <thead><tr><th>Final hand</th><th>1 credit</th><th>2</th><th>3</th><th>4</th><th>5</th></tr></thead>
-            <tbody>
-              <tr><td>Royal Flush</td><td>250</td><td>500</td><td>750</td><td>1,000</td><td>4,000</td></tr>
-              <tr><td>Straight Flush</td><td>50</td><td>100</td><td>150</td><td>200</td><td>250</td></tr>
-              <tr><td>Four Aces</td><td>80</td><td>160</td><td>240</td><td>320</td><td>400</td></tr>
-              <tr><td>Four 2s, 3s, or 4s</td><td>40</td><td>80</td><td>120</td><td>160</td><td>200</td></tr>
-              <tr><td>Four 5s through Kings</td><td>25</td><td>50</td><td>75</td><td>100</td><td>125</td></tr>
-              <tr><td>Full House</td><td>8</td><td>16</td><td>24</td><td>32</td><td>40</td></tr>
-              <tr><td>Flush</td><td>5</td><td>10</td><td>15</td><td>20</td><td>25</td></tr>
-              <tr><td>Straight</td><td>4</td><td>8</td><td>12</td><td>16</td><td>20</td></tr>
-              <tr><td>Three of a Kind</td><td>3</td><td>6</td><td>9</td><td>12</td><td>15</td></tr>
-              <tr><td>Two Pair</td><td>2</td><td>4</td><td>6</td><td>8</td><td>10</td></tr>
-              <tr><td>Jacks or Better</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td></tr>
-            </tbody>
-          </table></div>
+          <span class="step">06</span><p class="eyebrow">Bonus Poker</p><h2>Pay tables</h2>
+          <p>Each row shows payouts for 1 / 2 / 3 / 4 / 5 credits. Only the Full House payout changes among these variants; Flush remains 5-for-1.</p>
+          <div class="paytable-grid">
+            <div class="mini-paytable"><h3>8/5 <span>Full Pay</span></h3><table><tbody>
+              <tr><td>Royal Flush</td><td>250 / 500 / 750 / 1000 / 4000</td></tr><tr><td>Straight Flush</td><td>50 / 100 / 150 / 200 / 250</td></tr><tr><td>Four Aces</td><td>80 / 160 / 240 / 320 / 400</td></tr><tr><td>Four 2–4</td><td>40 / 80 / 120 / 160 / 200</td></tr><tr><td>Four 5–K</td><td>25 / 50 / 75 / 100 / 125</td></tr><tr class="variant"><td>Full House</td><td>8 / 16 / 24 / 32 / 40</td></tr><tr><td>Flush</td><td>5 / 10 / 15 / 20 / 25</td></tr><tr><td>Straight</td><td>4 / 8 / 12 / 16 / 20</td></tr><tr><td>Three Kind</td><td>3 / 6 / 9 / 12 / 15</td></tr><tr><td>Two Pair</td><td>2 / 4 / 6 / 8 / 10</td></tr><tr><td>Jacks+</td><td>1 / 2 / 3 / 4 / 5</td></tr>
+            </tbody></table></div>
+            <div class="mini-paytable"><h3>7/5</h3><table><tbody>
+              <tr><td>Royal Flush</td><td>250 / 500 / 750 / 1000 / 4000</td></tr><tr><td>Straight Flush</td><td>50 / 100 / 150 / 200 / 250</td></tr><tr><td>Four Aces</td><td>80 / 160 / 240 / 320 / 400</td></tr><tr><td>Four 2–4</td><td>40 / 80 / 120 / 160 / 200</td></tr><tr><td>Four 5–K</td><td>25 / 50 / 75 / 100 / 125</td></tr><tr class="variant"><td>Full House</td><td>7 / 14 / 21 / 28 / 35</td></tr><tr><td>Flush</td><td>5 / 10 / 15 / 20 / 25</td></tr><tr><td>Straight</td><td>4 / 8 / 12 / 16 / 20</td></tr><tr><td>Three Kind</td><td>3 / 6 / 9 / 12 / 15</td></tr><tr><td>Two Pair</td><td>2 / 4 / 6 / 8 / 10</td></tr><tr><td>Jacks+</td><td>1 / 2 / 3 / 4 / 5</td></tr>
+            </tbody></table></div>
+            <div class="mini-paytable"><h3>6/5</h3><table><tbody>
+              <tr><td>Royal Flush</td><td>250 / 500 / 750 / 1000 / 4000</td></tr><tr><td>Straight Flush</td><td>50 / 100 / 150 / 200 / 250</td></tr><tr><td>Four Aces</td><td>80 / 160 / 240 / 320 / 400</td></tr><tr><td>Four 2–4</td><td>40 / 80 / 120 / 160 / 200</td></tr><tr><td>Four 5–K</td><td>25 / 50 / 75 / 100 / 125</td></tr><tr class="variant"><td>Full House</td><td>6 / 12 / 18 / 24 / 30</td></tr><tr><td>Flush</td><td>5 / 10 / 15 / 20 / 25</td></tr><tr><td>Straight</td><td>4 / 8 / 12 / 16 / 20</td></tr><tr><td>Three Kind</td><td>3 / 6 / 9 / 12 / 15</td></tr><tr><td>Two Pair</td><td>2 / 4 / 6 / 8 / 10</td></tr><tr><td>Jacks+</td><td>1 / 2 / 3 / 4 / 5</td></tr>
+            </tbody></table></div>
+          </div>
           <p class="fine-print">Payouts are credits returned, not net profit. The five-credit Royal Flush contains the standard max-credit bonus.</p>
         </section>
 
