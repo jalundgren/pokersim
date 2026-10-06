@@ -58,8 +58,11 @@ const params = { games: 10, sets: 2, mode: 0, payTable: "8/5", credit: 1, denom:
 const first = await runExperiment(params);
 const second = await runExperiment(params);
 assert.equal(first.averageBet, 10);
+assert.equal(first.averageWager, 1);
 assert.deepEqual(first.averageCategories, second.averageCategories);
 assert.equal(first.averageHistory.length, 11);
+const fixedFive = await runExperiment({ ...params, sets: 1, credit: 5 });
+assert.equal(fixedFive.averageWager, 5);
 const rebuyRun = await runExperiment({
   ...params, games: 20, sets: 1, seed: 42, bankrollStart: 10,
   bankrollWalk: 100, bankrollMin: 9.99, rebuy: true,

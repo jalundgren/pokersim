@@ -271,6 +271,7 @@ async function runExperiment(params, onProgress = () => {}) {
   return {
     ...params,
     averageGames: totalGames / divisor, averageBet: totalBet / divisor,
+    averageWager: totalGames ? totalBet / totalGames : 0,
     averageReturned: totalReturned / divisor, averageNet: (totalReturned - totalBet) / divisor,
     averageEnding: totalEnding / divisor,
     averageCategories: Object.fromEntries(CATEGORY_ORDER.map(key => [key, categoryTotals[key] / divisor])),
@@ -340,7 +341,7 @@ function renderResults(r) {
   const netClass = r.averageNet >= 0 ? "positive" : "negative";
   const stats = [
     ["Avg. games", number(r.averageGames)], ["Avg. play time", formatPlayTime(r.averageGames)], ["Avg. ending", money(r.averageEnding)],
-    ["Avg. total bet", money(r.averageBet)], ["Avg. returned", money(r.averageReturned)],
+    [r.sets === 1 ? "Total $ played" : "Avg. total $ played", money(r.averageBet)], ["Average bet", money(r.averageWager)], ["Avg. returned", money(r.averageReturned)],
     ["Avg. net", `${r.averageNet >= 0 ? "+" : "−"}${money(Math.abs(r.averageNet))}`, netClass],
     ["Return", percent(r.averageReturned / r.averageBet)], ["Avg. rebuys", number(r.averageRebuys)],
     ["Avg. rebuy added", money(r.averageRebuyDollars)],
@@ -363,7 +364,7 @@ function textReport(r) {
     `Betting mode:      ${r.mode} - ${MODES[r.mode][0]}`, `Pay table:         ${r.payTable} Bonus Poker`, `Rebuy:             ${r.rebuy ? "enabled" : "disabled"}`, `Denomination:       ${money(r.denom)}`,
   ];
   if (r.mode === 0) lines.push(`Credit per game:    ${r.credit}`, `Bet per game:       ${money(r.denom * r.credit)}`);
-  lines.push(`Avg total bet:      ${money(r.averageBet)}`, `Avg total returned: ${money(r.averageReturned)}`,
+  lines.push(`${r.sets === 1 ? "Total $ played:" : "Avg total $ played:".padEnd(20)} ${money(r.averageBet)}`, `Average bet:        ${money(r.averageWager)}`, `Avg total returned: ${money(r.averageReturned)}`,
     `Avg net:            ${money(r.averageNet)}`, `Return:             ${percent(r.averageReturned / r.averageBet)}`,
     `Avg winning hands: ${number(r.averageWins)} (${percent(r.averageWins / r.averageGames, 4)})`, "", "Bankroll:",
     `  Starting balance: ${money(r.bankrollStart)}`, `  Ending balance:   ${money(r.averageEnding)}`, `  Avg rebuys:       ${number(r.averageRebuys)}`, `  Avg rebuy added:  ${money(r.averageRebuyDollars)}`, "", "Set outcomes:");
