@@ -305,6 +305,16 @@ function readParams(overrides = {}) {
 function money(value) { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value); }
 function number(value, digits = 2) { return value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits }); }
 function percent(value, digits = 3) { return `${(value * 100).toFixed(digits)}%`; }
+function formatPlayTime(games) {
+  let seconds = Math.round(games * CONFIG.secondsPerGame);
+  const hours = Math.floor(seconds / 3600); seconds %= 3600;
+  const minutes = Math.floor(seconds / 60); seconds %= 60;
+  const parts = [];
+  if (hours) parts.push(`${hours.toLocaleString()} hr`);
+  if (minutes || hours) parts.push(`${minutes} min`);
+  parts.push(`${seconds} sec`);
+  return parts.join(" ");
+}
 function titleCategory(key) { return key.split("_").map(word => word[0].toUpperCase() + word.slice(1)).join(" "); }
 
 function renderTable(target, rows) {
@@ -316,7 +326,7 @@ function renderResults(r) {
   $("result-context").textContent = `${r.sets.toLocaleString()} ${r.sets === 1 ? "set" : "sets"} · seed ${r.seed}`;
   const netClass = r.averageNet >= 0 ? "positive" : "negative";
   const stats = [
-    ["Avg. games", number(r.averageGames)], ["Avg. ending", money(r.averageEnding)],
+    ["Avg. games", number(r.averageGames)], ["Avg. play time", formatPlayTime(r.averageGames)], ["Avg. ending", money(r.averageEnding)],
     ["Avg. total bet", money(r.averageBet)], ["Avg. returned", money(r.averageReturned)],
     ["Avg. net", `${r.averageNet >= 0 ? "+" : "−"}${money(Math.abs(r.averageNet))}`, netClass],
     ["Return", percent(r.averageReturned / r.averageBet)],
@@ -335,7 +345,7 @@ function renderResults(r) {
 function textReport(r) {
   const lines = [
     `Sets:              ${r.sets.toLocaleString()}`, `Games per set:      up to ${r.games.toLocaleString()}`,
-    `Avg games played: ${number(r.averageGames)}`, `RNG seed:           ${r.seed}`,
+    `Avg games played: ${number(r.averageGames)}`, `Avg play time:     ${formatPlayTime(r.averageGames)} (${CONFIG.secondsPerGame} sec/game)`, `RNG seed:           ${r.seed}`,
     `Betting mode:      ${r.mode} - ${MODES[r.mode][0]}`, `Denomination:       ${money(r.denom)}`,
   ];
   if (r.mode === 0) lines.push(`Credit per game:    ${r.credit}`, `Bet per game:       ${money(r.denom * r.credit)}`);
@@ -391,12 +401,20 @@ form.addEventListener("submit", async event => { event.preventDefault(); try { a
 $("cancel-button").addEventListener("click", () => { cancelRequested = true; $("progress").textContent = "Cancelling…"; });
 $("mode").addEventListener("change", updateModeCard);
 ["bankroll-start", "bankroll-walk"].forEach(id => $(id).addEventListener("input", updateModeCard));
+["games", "sets"].forEach(id => $(id).addEventListener("input", updatePlayTimeEstimate));
 window.addEventListener("resize", () => { if (lastChartHistory) drawChart(lastChartHistory); });
 
 function updateModeCard() {
   const mode = Number($("mode").value); $("mode-title").textContent = MODES[mode][0]; $("mode-description").textContent = MODES[mode][1];
   $("credit").disabled = mode !== 0; $("credit-note").textContent = mode === 0 ? "Used only in No Ladder mode." : "This ladder controls the credit level.";
   const start = Number($("bankroll-start").value || 0), walk = Number($("bankroll-walk").value || 0); $("bankroll-rule").textContent = `${money(start)} → ${money(walk)}`;
+}
+
+function updatePlayTimeEstimate() {
+  const games = Number($("games").value), sets = Number($("sets").value);
+  if (!(games > 0) || !(sets > 0)) { $("play-time-estimate").textContent = "Estimated play time unavailable"; return; }
+  const perSet = formatPlayTime(games), total = formatPlayTime(games * sets);
+  $("play-time-estimate").textContent = `Estimated play time: ${perSet} per set${sets > 1 ? ` · ${total} total` : ""}`;
 }
 
 function registerWebMcp() {
@@ -416,11 +434,11 @@ function registerWebMcp() {
         const params = readParams(input); Object.entries(input).forEach(([key, value]) => {
           const ids = { bankrollStart: "bankroll-start", bankrollWalk: "bankroll-walk", bankrollMin: "bankroll-min" };
           const node = $(ids[key] || key); if (node) node.value = value;
-        }); updateModeCard(); const result = await executeSimulation(params);
+        }); updateModeCard(); updatePlayTimeEstimate(); const result = await executeSimulation(params);
         return { sets: result.sets, averageGames: result.averageGames, averageEndingBankroll: result.averageEnding, averageNet: result.averageNet, returnPercent: result.averageReturned / result.averageBet * 100 };
       },
     });
   } catch (error) { console.warn("WebMCP registration unavailable", error); }
 }
 
-updateModeCard(); registerWebMcp();
+updateModeCard(); updatePlayTimeEstimate(); registerWebMcp();
