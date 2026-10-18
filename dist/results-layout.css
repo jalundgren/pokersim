@@ -1,0 +1,13 @@
+.stat-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+
+.stat {
+  min-width: 0;
+}
+
+.stat strong {
+  white-space: nowrap;
+  font-size: clamp(1.25rem, 2vw, 2rem);
+  font-variant-numeric: tabular-nums;
+}

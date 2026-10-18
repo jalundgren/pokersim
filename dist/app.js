@@ -6,6 +6,8 @@ const CONFIG = {
   secondsPerGame: 5,
   ladderMin: 1,
   ladderMax: 5,
+  maxRtpStrength: 25,
+  fullCorrectionRateGap: 0.05,
 };
 
 const MODES = {
@@ -197,13 +199,25 @@ function makeRng(seed) {
 }
 
 function shuffledDeck(rng) {
-  const deck = DECK.slice();
+  return shuffledCards(DECK, rng);
+}
+
+function shuffledCards(cards, rng) {
+  const deck = cards.slice();
   for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
   return deck;
 }
 
 function emptyCounts(keys) { return Object.fromEntries(keys.map(key => [key, 0])); }
 function yieldFrame() { return new Promise(resolve => setTimeout(resolve, 0)); }
+
+function rtpCorrectionProbability(returnDebt, remainingWager, strength, sets) {
+  if (!returnDebt || strength <= 0 || remainingWager <= 0) return 0;
+  const requiredRateShift = Math.abs(returnDebt) / remainingWager;
+  const urgency = Math.min(1, requiredRateShift / CONFIG.fullCorrectionRateGap);
+  const boundedStrength = Math.min(strength, CONFIG.maxRtpStrength) / 100;
+  return boundedStrength * urgency / Math.sqrt(sets);
+}
 
 async function runExperiment(params, onProgress = () => {}) {
   validateParams(params);
@@ -215,6 +229,7 @@ async function runExperiment(params, onProgress = () => {}) {
   let totalGames = 0, totalBet = 0, totalReturned = 0, totalEnding = 0;
   let totalIncreases = 0, totalDecreases = 0, totalResets = 0, totalEndingCredit = 0;
   let totalRebuys = 0;
+  let totalFavorableAdjustments = 0, totalUnfavorableAdjustments = 0, totalCorrectionProbability = 0;
   let operations = 0;
 
   for (let setIndex = 0; setIndex < params.sets; setIndex++) {
@@ -225,6 +240,7 @@ async function runExperiment(params, onProgress = () => {}) {
     const history = [params.bankrollStart];
     let bankroll = params.bankrollStart, gamesPlayed = 0, setBet = 0, setReturned = 0;
     let ladderCredit = 1, increases = 0, decreases = 0, resets = 0, rebuys = 0, stopReason = "game count completed";
+    let favorableAdjustments = 0, unfavorableAdjustments = 0, correctionProbabilityTotal = 0;
 
     for (let game = 0; game < params.games; game++) {
       const gameCredit = params.mode === 0 ? params.credit : ladderCredit;
@@ -233,9 +249,39 @@ async function runExperiment(params, onProgress = () => {}) {
       const deck = shuffledDeck(rng);
       const hand = deck.slice(0, 5);
       const held = chooseHold(hand, gameCredit);
-      const finalHand = held.map(i => hand[i]).concat(deck.slice(5, 5 + 5 - held.length));
-      const category = handCategory(finalHand);
-      const payout = PAYTABLES[params.payTable][category][gameCredit - 1] * params.denom;
+      const drawCount = 5 - held.length;
+      const heldCards = held.map(i => hand[i]);
+      let finalHand = heldCards.concat(deck.slice(5, 5 + drawCount));
+      let category = handCategory(finalHand);
+      let payout = PAYTABLES[params.payTable][category][gameCredit - 1] * params.denom;
+
+      // RTP control never changes the initial deal or hold decision. It may
+      // very occasionally replace the normal second draw with one other
+      // independently random, legal draw from the same remaining 47 cards.
+      const projectedBet = setBet + bet;
+      const returnDebt = params.rtpTarget / 100 * projectedBet - setReturned;
+      const remainingHands = params.games - gamesPlayed - 1;
+      const averageWager = projectedBet / (gamesPlayed + 1);
+      const estimatedRemainingWager = Math.max(averageWager, remainingHands * averageWager);
+      const correctionProbability = drawCount > 0
+        ? rtpCorrectionProbability(returnDebt, estimatedRemainingWager, params.rtpStrength, params.sets)
+        : 0;
+      correctionProbabilityTotal += correctionProbability;
+
+      if (correctionProbability > 0) {
+        const alternateDeck = shuffledCards(deck.slice(5), rng);
+        const alternateHand = heldCards.concat(alternateDeck.slice(0, drawCount));
+        const alternateCategory = handCategory(alternateHand);
+        const alternatePayout = PAYTABLES[params.payTable][alternateCategory][gameCredit - 1] * params.denom;
+        const helpsTarget = returnDebt > 0 ? alternatePayout > payout : alternatePayout < payout;
+        if (helpsTarget && rng() < correctionProbability) {
+          if (alternatePayout > payout) favorableAdjustments++;
+          else unfavorableAdjustments++;
+          finalHand = alternateHand;
+          category = alternateCategory;
+          payout = alternatePayout;
+        }
+      }
       categories[category]++; levels[gameCredit]++; gamesPlayed++; setBet += bet; setReturned += payout;
       bankroll += payout - bet; history.push(bankroll);
       if (params.mode !== 0) {
@@ -258,6 +304,9 @@ async function runExperiment(params, onProgress = () => {}) {
     totalGames += gamesPlayed; totalBet += setBet; totalReturned += setReturned; totalEnding += bankroll;
     totalIncreases += increases; totalDecreases += decreases; totalResets += resets;
     totalRebuys += rebuys;
+    totalFavorableAdjustments += favorableAdjustments;
+    totalUnfavorableAdjustments += unfavorableAdjustments;
+    totalCorrectionProbability += correctionProbabilityTotal;
     totalEndingCredit += params.mode === 0 ? params.credit : ladderCredit;
     CATEGORY_ORDER.forEach(key => categoryTotals[key] += categories[key]);
     [1, 2, 3, 4, 5].forEach(key => creditTotals[key] += levels[key]);
@@ -273,6 +322,7 @@ async function runExperiment(params, onProgress = () => {}) {
     averageGames: totalGames / divisor, averageBet: totalBet / divisor,
     averageWager: totalGames ? totalBet / totalGames : 0,
     averageReturned: totalReturned / divisor, averageNet: (totalReturned - totalBet) / divisor,
+    rtp: totalBet ? totalReturned / totalBet : 0,
     averageEnding: totalEnding / divisor,
     averageCategories: Object.fromEntries(CATEGORY_ORDER.map(key => [key, categoryTotals[key] / divisor])),
     averageCredits: Object.fromEntries([1, 2, 3, 4, 5].map(key => [key, creditTotals[key] / divisor])),
@@ -281,6 +331,9 @@ async function runExperiment(params, onProgress = () => {}) {
     averageResets: totalResets / divisor, averageEndingCredit: totalEndingCredit / divisor,
     averageRebuys: totalRebuys / divisor, averageRebuyDollars: totalRebuys * params.bankrollStart / divisor,
     averageWins: (totalGames - categoryTotals.nothing) / divisor,
+    averageFavorableAdjustments: totalFavorableAdjustments / divisor,
+    averageUnfavorableAdjustments: totalUnfavorableAdjustments / divisor,
+    averageCorrectionProbability: totalGames ? totalCorrectionProbability / totalGames : 0,
   };
 }
 
@@ -294,6 +347,8 @@ function validateParams(p) {
   if (p.credit < 1 || p.credit > 5) throw new Error("Credits must be between 1 and 5.");
   if (!PAYTABLES[p.payTable]) throw new Error("Pay Table must be 8/5, 7/5, or 6/5.");
   if (!(p.denom > 0)) throw new Error("Denomination must be greater than zero.");
+  if (!(p.rtpTarget >= 0 && p.rtpTarget <= 100)) throw new Error("RTP Target must be between 0% and 100%.");
+  if (!(p.rtpStrength >= 0 && p.rtpStrength <= CONFIG.maxRtpStrength)) throw new Error(`RTP Correction Strength must be between 0% and ${CONFIG.maxRtpStrength}%.`);
   if (!(p.bankrollStart > 0)) throw new Error("Starting bankroll must be greater than zero.");
   if (!(p.bankrollMin >= 0 && p.bankrollMin < p.bankrollStart)) throw new Error("Minimum bankroll must be between zero and the starting bankroll.");
   if (!(p.bankrollWalk > p.bankrollStart)) throw new Error("Walk-away bankroll must exceed the starting bankroll.");
@@ -309,6 +364,8 @@ function readParams(overrides = {}) {
     games: Number(overrides.games ?? $("games").value), sets: Number(overrides.sets ?? $("sets").value),
     mode: Number(overrides.mode ?? $("mode").value), payTable: String(overrides.payTable ?? $("pay-table").value), credit: Number(overrides.credit ?? $("credit").value),
     denom: Number(overrides.denom ?? $("denom").value), seed,
+    rtpTarget: Number(overrides.rtpTarget ?? $("rtp-target").value),
+    rtpStrength: Number(overrides.rtpStrength ?? $("rtp-strength").value),
     bankrollStart: Number(overrides.bankrollStart ?? $("bankroll-start").value),
     bankrollWalk: Number(overrides.bankrollWalk ?? $("bankroll-walk").value),
     bankrollMin: Number(overrides.bankrollMin ?? $("bankroll-min").value),
@@ -316,18 +373,14 @@ function readParams(overrides = {}) {
   };
 }
 
-function money(value) { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value); }
+function money(value) { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value); }
 function number(value, digits = 2) { return value.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits }); }
 function percent(value, digits = 3) { return `${(value * 100).toFixed(digits)}%`; }
 function formatPlayTime(games) {
-  let seconds = Math.round(games * CONFIG.secondsPerGame);
-  const hours = Math.floor(seconds / 3600); seconds %= 3600;
-  const minutes = Math.floor(seconds / 60); seconds %= 60;
-  const parts = [];
-  if (hours) parts.push(`${hours.toLocaleString()} hr`);
-  if (minutes || hours) parts.push(`${minutes} min`);
-  parts.push(`${seconds} sec`);
-  return parts.join(" ");
+  const totalMinutes = Math.round(games * CONFIG.secondsPerGame / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours.toLocaleString()}h ${minutes}m`;
 }
 function titleCategory(key) { return key.split("_").map(word => word[0].toUpperCase() + word.slice(1)).join(" "); }
 
@@ -343,14 +396,24 @@ function renderResults(r) {
     ["Avg. games", number(r.averageGames)], ["Avg. play time", formatPlayTime(r.averageGames)], ["Avg. ending", money(r.averageEnding)],
     [r.sets === 1 ? "Total $ played" : "Avg. total $ played", money(r.averageBet)], ["Average bet", money(r.averageWager)], ["Avg. returned", money(r.averageReturned)],
     ["Avg. net", `${r.averageNet >= 0 ? "+" : "−"}${money(Math.abs(r.averageNet))}`, netClass],
-    ["Return", percent(r.averageReturned / r.averageBet)], ["Avg. rebuys", number(r.averageRebuys)],
+    ["RTP", percent(r.rtp, 1)], ["Avg. rebuys", number(r.averageRebuys)],
     ["Avg. rebuy added", money(r.averageRebuyDollars)],
+    ["RTP Target", `${number(r.rtpTarget, 1)}%`], ["Correction strength", `${number(r.rtpStrength, 1)}%`],
   ];
   $("stat-grid").innerHTML = stats.map(([label, value, cls = ""]) => `<div class="stat ${cls}"><span>${label}</span><strong>${value}</strong></div>`).join("");
   $("chart-title").textContent = r.sets === 1 ? "Bankroll by hand" : `Average bankroll across ${r.sets.toLocaleString()} sets`;
   $("chart-legend").innerHTML = `<span></span>${r.sets === 1 ? "Balance" : "Average balance"}`;
   renderTable($("credit-table"), [1, 2, 3, 4, 5].map(level => [`Level ${level}`, number(r.averageCredits[level]), percent(r.averageCredits[level] / r.averageGames, 4)]));
   renderTable($("category-table"), CATEGORY_ORDER.map(key => [titleCategory(key), number(r.averageCategories[key]), percent(r.averageCategories[key] / r.averageGames, 4)]));
+  const averageAdjustments = r.averageFavorableAdjustments + r.averageUnfavorableAdjustments;
+  renderTable($("rtp-control-table"), [
+    ["Target", `${number(r.rtpTarget, 1)}%`, ""],
+    ["Correction strength", `${number(r.rtpStrength, 1)}%`, r.rtpStrength > 0 ? "controlled" : "random"],
+    ["Avg. favorable adjustments", number(r.averageFavorableAdjustments), percent(r.averageFavorableAdjustments / r.averageGames, 3)],
+    ["Avg. unfavorable adjustments", number(r.averageUnfavorableAdjustments), percent(r.averageUnfavorableAdjustments / r.averageGames, 3)],
+    ["Avg. total adjustments", number(averageAdjustments), percent(averageAdjustments / r.averageGames, 3)],
+    ["Avg. correction probability", percent(r.averageCorrectionProbability, 3), "per hand"],
+  ]);
   renderTable($("outcome-table"), Object.entries(r.outcomes).map(([key, count]) => [key, count.toLocaleString(), percent(count / r.sets, 2)]));
   $("report-output").textContent = textReport(r);
   lastChartHistory = r.averageHistory; drawChart(lastChartHistory);
@@ -360,15 +423,17 @@ function renderResults(r) {
 function textReport(r) {
   const lines = [
     `Sets:              ${r.sets.toLocaleString()}`, `Games per set:      up to ${r.games.toLocaleString()}`,
-    `Avg games played: ${number(r.averageGames)}`, `Avg play time:     ${formatPlayTime(r.averageGames)} (${CONFIG.secondsPerGame} sec/game)`, `RNG seed:           ${r.seed}`,
+    `Avg games played: ${number(r.averageGames)}`, `Avg play time:     ${formatPlayTime(r.averageGames)}`, `RNG seed:           ${r.seed}`,
     `Betting mode:      ${r.mode} - ${MODES[r.mode][0]}`, `Pay table:         ${r.payTable} Bonus Poker`, `Rebuy:             ${r.rebuy ? "enabled" : "disabled"}`, `Denomination:       ${money(r.denom)}`,
+    `RTP target:        ${number(r.rtpTarget, 1)}%`, `Correction strength:${number(r.rtpStrength, 1).padStart(7)}%`,
   ];
   if (r.mode === 0) lines.push(`Credit per game:    ${r.credit}`, `Bet per game:       ${money(r.denom * r.credit)}`);
   lines.push(`${r.sets === 1 ? "Total $ played:" : "Avg total $ played:".padEnd(20)} ${money(r.averageBet)}`, `Average bet:        ${money(r.averageWager)}`, `Avg total returned: ${money(r.averageReturned)}`,
-    `Avg net:            ${money(r.averageNet)}`, `Return:             ${percent(r.averageReturned / r.averageBet)}`,
+    `Avg net:            ${money(r.averageNet)}`, `RTP:                ${percent(r.rtp, 1)}`,
     `Avg winning hands: ${number(r.averageWins)} (${percent(r.averageWins / r.averageGames, 4)})`, "", "Bankroll:",
     `  Starting balance: ${money(r.bankrollStart)}`, `  Ending balance:   ${money(r.averageEnding)}`, `  Avg rebuys:       ${number(r.averageRebuys)}`, `  Avg rebuy added:  ${money(r.averageRebuyDollars)}`, "", "Set outcomes:");
   Object.entries(r.outcomes).forEach(([reason, count]) => lines.push(`  ${reason}: ${count} (${percent(count / r.sets, 2)})`));
+  lines.push("", "RTP control:", `  Avg favorable adjustments:   ${number(r.averageFavorableAdjustments)}`, `  Avg unfavorable adjustments: ${number(r.averageUnfavorableAdjustments)}`, `  Avg correction probability:  ${percent(r.averageCorrectionProbability, 3)}`);
   lines.push("", "Average credit levels:");
   [1, 2, 3, 4, 5].forEach(level => lines.push(`  Level ${level}: ${number(r.averageCredits[level])} (${percent(r.averageCredits[level] / r.averageGames, 4)})`));
   if (r.mode !== 0) lines.push(`  Credit increases: ${number(r.averageIncreases)}`, `  Credit decreases: ${number(r.averageDecreases)}`, `  Resets to level 1: ${number(r.averageResets)}`, `  Ending level: ${number(r.averageEndingCredit)}`);

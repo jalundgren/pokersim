@@ -7,6 +7,7 @@
   <meta name="description" content="Run client-side Bonus Poker simulations across 8/5, 7/5, and 6/5 pay tables.">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23081317'/%3E%3Cpath d='M32 10 47 27 32 54 17 27Z' fill='%23efc56b'/%3E%3Ccircle cx='32' cy='29' r='7' fill='%23081317'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="results-layout.css">
 </head>
 <body>
   <main class="shell">
@@ -30,7 +31,7 @@
         <div class="field-grid">
           <label>Games per set
             <input id="games" name="games" type="number" min="1" max="100000" step="1" value="2000" required>
-            <small id="play-time-estimate">Estimated play time: 2 hr 46 min 40 sec per set</small>
+            <small id="play-time-estimate">Estimated play time: 2h 47m per set</small>
           </label>
           <label>Number of sets
             <input id="sets" name="sets" type="number" min="1" max="1000000" step="1" value="1" required>
@@ -60,6 +61,14 @@
           </label>
           <label>Denomination ($)
             <input id="denom" name="denom" type="number" min="0.01" step="0.01" value="1.00" required>
+          </label>
+          <label>RTP Target (%)
+            <input id="rtp-target" name="rtp-target" type="number" min="0" max="100" step="0.1" value="98.0" required>
+            <small>Desired return to player.</small>
+          </label>
+          <label>RTP Correction Strength (%)
+            <input id="rtp-strength" name="rtp-strength" type="number" min="0" max="25" step="0.1" value="1.0" required>
+            <small>0 is fully random; higher values correct faster.</small>
           </label>
           <label><span class="label-title">Seed <span class="optional">optional</span></span>
             <input id="seed" name="seed" type="text" inputmode="numeric" placeholder="Generated automatically">
@@ -111,6 +120,7 @@
       <div class="report-grid">
         <section class="report-card"><h3>Credit levels</h3><div id="credit-table"></div></section>
         <section class="report-card"><h3>Hand results</h3><div id="category-table"></div></section>
+        <section class="report-card wide"><h3>RTP control</h3><div id="rtp-control-table"></div></section>
         <section class="report-card wide"><h3>Set outcomes</h3><div id="outcome-table"></div></section>
       </div>
 

@@ -35,8 +35,9 @@
           <span class="step">01</span>
           <p class="eyebrow">Overview</p>
           <h2>What the simulator models</h2>
-          <p>This simulator deals independent hands of Bonus Poker from a fresh 52-card deck. It uses the same fixed, ordered 37-rule strategy chart for all variants, draws replacement cards, evaluates the final hand, and applies the selected 8/5, 7/5, or 6/5 pay table.</p>
+          <p>This simulator deals Bonus Poker from a fresh 52-card deck. It uses the same fixed, ordered 37-rule strategy chart for all variants, draws replacement cards, evaluates the final hand, and applies the selected 8/5, 7/5, or 6/5 pay table.</p>
           <div class="callout"><strong>This is not an AI model.</strong> The hold decision is deterministic: rules are checked from first to last, and the first matching rule wins.</div>
+          <div class="callout warning"><strong>Controlled draws:</strong> when RTP Correction Strength is above 0%, replacement cards are not purely random. The initial deal and hold decision remain unchanged, but the engine can occasionally substitute one independently random legal second draw when it moves the set toward its RTP target. Set strength to 0% for an uncontrolled random simulation.</div>
           <p>A <strong>win</strong> means any final category with a non-zero paytable return, including Jacks or Better. A final category of <strong>Nothing</strong> is a loss. Betting ladders react to that win/loss definition.</p>
         </section>
 
@@ -49,6 +50,8 @@
             <div><h3>Pay Table</h3><p>Selects 8/5 Full Pay, 7/5, or 6/5 Bonus Poker. The first number is the Full House payout; the second is the Flush payout.</p></div>
             <div><h3>Credits per bet</h3><p>The number of credits used on every hand in Mode 0. Modes 1–5 ignore this input because the ladder controls credits.</p></div>
             <div><h3>Denomination</h3><p>The cash value of one credit. The hand’s bet is <strong>denomination × credits</strong>.</p></div>
+            <div><h3>RTP Target</h3><p>The desired return percentage for each set. The controller compares cumulative dollars returned with cumulative dollars wagered.</p></div>
+            <div><h3>RTP Correction Strength</h3><p>Controls the maximum chance of substituting a second random draw that moves RTP toward the target. A value of 0% disables control; larger values respond faster. Strength is capped at 25% and scales down when more sets are requested.</p></div>
             <div><h3>Seed</h3><p>An optional whole number used to reproduce an experiment. Leave it blank for a fresh random seed.</p></div>
             <div><h3>Starting balance</h3><p>The bankroll available at the beginning of every set. It must be greater than zero.</p></div>
             <div><h3>Walk-away balance</h3><p>A set stops after a completed hand reaches or exceeds this target. It must be greater than the starting balance.</p></div>
@@ -88,6 +91,8 @@
             <div><h3>Average games</h3><p>Mean hands completed per set. This can be lower than requested when bankroll rules stop sets early.</p></div>
             <div><h3>Total $ played / returned</h3><p>Total dollars wagered in one set, or the average total per set when multiple sets run. Returned is the corresponding amount paid back.</p></div>
             <div><h3>Average bet</h3><p>Total dollars played divided by hands played. With No Ladder, this equals credits per bet × denomination.</p></div>
+            <div><h3>RTP</h3><p>Total dollars returned divided by total dollars wagered across every completed hand and set.</p></div>
+            <div><h3>RTP control</h3><p>Reports favorable and unfavorable second-draw substitutions and the average per-hand correction probability. The controller is independent within each set and cannot guarantee an exact final RTP.</p></div>
             <div><h3>Net</h3><p>Average returned minus average bet. A negative number is an average loss.</p></div>
             <div><h3>Ending bankroll</h3><p>The final balance for one set or the average final balance across multiple sets.</p></div>
             <div><h3>Credit levels</h3><p>How often each credit level was used, averaged per set for multi-set runs.</p></div>
